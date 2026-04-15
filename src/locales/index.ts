@@ -103,6 +103,8 @@ const translations = {
     scNewlyAvailable: 'Newly Available',
     scNoFactory: 'No factory assigned',
     scUpdateFactory: 'Update Selection',
+    scOpSelected: 'Selected in OP',
+    scOpSelectedBadge: 'From OP',
   },
   zh: {
     // 导航
@@ -206,6 +208,8 @@ const translations = {
     scNewlyAvailable: '新可用',
     scNoFactory: '未分配工厂',
     scUpdateFactory: '更新选择',
+    scOpSelected: 'OP阶段已选',
+    scOpSelectedBadge: '来自OP',
   },
 } as const;
 

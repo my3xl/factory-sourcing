@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { SalesContract, SCStatus, FactorySelection } from '../../types/salesContract';
+import type { Factory } from '../../types/factory';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
+import { matchResults } from '../../data/factories';
 
 const scStatusLabel: Record<SCStatus, 'scPending' | 'scFactoryConfirmed' | 'scPushed' | 'scInProduction' | 'scShipped'> = {
   pending: 'scPending',
@@ -17,18 +19,6 @@ const scStatusColor: Record<SCStatus, string> = {
   pushed: 'bg-purple-100 text-purple-700',
   in_production: 'bg-orange-100 text-orange-700',
   shipped: 'bg-green-100 text-green-700',
-};
-
-const selectionStatusColor: Record<string, string> = {
-  confirmed: 'bg-green-100 text-green-700',
-  capacity_changed: 'bg-yellow-100 text-yellow-700',
-  newly_available: 'bg-blue-100 text-blue-700',
-};
-
-const selectionStatusLabel: Record<string, 'scFactoryConfirmedLabel' | 'scCapacityChanged' | 'scNewlyAvailable'> = {
-  confirmed: 'scFactoryConfirmedLabel',
-  capacity_changed: 'scCapacityChanged',
-  newly_available: 'scNewlyAvailable',
 };
 
 const capacityColor: Record<string, string> = {
@@ -52,6 +42,15 @@ function formatDate(dateStr: string, lang: 'en' | 'zh'): string {
   return lang === 'en'
     ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+}
+
+// Simulate capacity changes in SC stage
+function simulateCapacityUpdate(f: Factory): 'available' | 'tight' | 'full' {
+  if (!f.capacityStatus) return 'available';
+  // Some factories that were available become full/tight in SC stage
+  if (f.id === 'F-001') return 'full';       // Was available → now full
+  if (f.id === 'F-005') return 'tight';      // Was available → now tight
+  return f.capacityStatus;
 }
 
 function StyleTable({ sc }: { sc: SalesContract }) {
@@ -100,46 +99,6 @@ function StyleTable({ sc }: { sc: SalesContract }) {
   );
 }
 
-function FactorySelectionRow({ fac, onToggle }: { fac: FactorySelection; onToggle: () => void }) {
-  const { lang } = useLang();
-  return (
-    <div className={`border rounded-lg p-3 text-sm ${fac.selected ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white'}`}>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={fac.selected}
-          onChange={onToggle}
-          className="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown cursor-pointer"
-        />
-        {fac.factoryCode && <span className="text-xs text-brand-gray font-mono">{fac.factoryCode}</span>}
-        <span className="font-medium text-brand-dark">{fac.factoryName}</span>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          {fac.rating && (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${fac.rating === 'A' ? 'bg-brand-brown text-white' : 'bg-brand-warm text-white'}`}>
-              {fac.rating}
-            </span>
-          )}
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${capacityColor[fac.capacityStatus]}`}>
-            {t(lang, capacityKey[fac.capacityStatus])}
-          </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${selectionStatusColor[fac.selectionStatus]}`}>
-            {t(lang, selectionStatusLabel[fac.selectionStatus])}
-          </span>
-          {fac.supplierType === 'external' && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 font-medium">
-              {t(lang, 'noRating')}
-            </span>
-          )}
-        </div>
-      </div>
-      {fac.note && (
-        <div className="ml-6 mt-1 text-[10px] text-yellow-700 italic">{fac.note}</div>
-      )}
-    </div>
-  );
-}
-
 interface ScRowProps {
   sc: SalesContract;
 }
@@ -147,23 +106,85 @@ interface ScRowProps {
 export default function ScRow({ sc }: ScRowProps) {
   const { lang } = useLang();
   const [expanded, setExpanded] = useState(false);
-  const [factories, setFactories] = useState(sc.factorySelections);
+  const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(
+    sc.factorySelections.find((f) => f.selected)?.factoryId ?? null
+  );
+  const [refreshing, setRefreshing] = useState(false);
+  const [allFactories, setAllFactories] = useState<FactorySelection[] | null>(null);
 
-  const selectedFactory = factories.find((f) => f.selected);
-  const styleCount = sc.styles.length;
-  const colorwayCount = sc.styles.reduce((a, s) => a + s.colorways.length, 0);
+  // OP-stage selections (from original data, for reference)
+  const opSelectedIds = new Set(sc.factorySelections.filter((f) => f.selected).map((f) => f.factoryId));
 
-  const handleToggleFactory = (idx: number) => {
-    setFactories((prev) =>
-      prev.map((f, i) => (i === idx ? { ...f, selected: !f.selected } : f))
-    );
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      const opMatch = matchResults[sc.opId];
+      if (!opMatch) {
+        setAllFactories([]);
+        setRefreshing(false);
+        return;
+      }
+      const allFromMatch = [
+        ...opMatch.internalWithCapacity.map((f) => {
+          const cap = simulateCapacityUpdate(f);
+          return {
+            factoryId: f.id,
+            factoryName: f.name,
+            factoryCode: f.code ?? '',
+            supplierType: f.supplierType as 'internal' | 'external',
+            rating: f.rating,
+            capacityStatus: cap,
+            selectionStatus: opSelectedIds.has(f.id)
+              ? (cap !== f.capacityStatus ? 'capacity_changed' : 'confirmed')
+              : 'confirmed',
+            selected: false,
+            note: cap !== f.capacityStatus ? `Capacity changed: ${f.capacityStatus} → ${cap}` : undefined,
+          } satisfies FactorySelection;
+        }),
+        ...opMatch.internalNoCapacity.map((f) => {
+          const cap = simulateCapacityUpdate(f);
+          return {
+            factoryId: f.id,
+            factoryName: f.name,
+            factoryCode: f.code ?? '',
+            supplierType: f.supplierType as 'internal',
+            rating: f.rating,
+            capacityStatus: cap,
+            selectionStatus: opSelectedIds.has(f.id) ? 'capacity_changed' : 'confirmed',
+            selected: false,
+            note: `Was full, now ${cap}`,
+          } satisfies FactorySelection;
+        }),
+        ...opMatch.external.map((f) => ({
+          factoryId: f.id,
+          factoryName: f.name,
+          factoryCode: '',
+          supplierType: 'external' as const,
+          rating: undefined,
+          capacityStatus: 'available' as const,
+          selectionStatus: 'newly_available' as const,
+          selected: false,
+          note: 'External sourcing confirmed — now available',
+        })),
+      ];
+      setAllFactories(allFromMatch);
+      setRefreshing(false);
+    }, 1500);
   };
+
+  const displayFactories = allFactories ?? sc.factorySelections;
+
+  // Split: OP-selected (reference only) vs selectable
+  const opSelected = displayFactories.filter((f) => opSelectedIds.has(f.factoryId));
+  const selectable = displayFactories.filter((f) => !opSelectedIds.has(f.factoryId));
+
+  const selectedFactory = displayFactories.find((f) => f.factoryId === selectedFactoryId);
 
   return (
     <div className="border-b border-brand-border last:border-b-0">
-      {/* Main row */}
+      {/* Main row — removed Styles column */}
       <div
-        className="grid grid-cols-[100px_80px_1fr_1fr_80px_80px_80px_100px_60px_1fr] gap-2 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
+        className="grid grid-cols-[100px_80px_1fr_1fr_80px_80px_80px_100px_1fr] gap-2 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
         onClick={() => setExpanded(!expanded)}
       >
         <span className="text-xs font-mono text-brand-dark font-medium">{sc.id}</span>
@@ -179,7 +200,6 @@ export default function ScRow({ sc }: ScRowProps) {
         <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center min-w-[80px] ${scStatusColor[sc.status]}`}>
           {t(lang, scStatusLabel[sc.status])}
         </span>
-        <span className="text-xs text-brand-gray">{styleCount}S / {colorwayCount}C</span>
         <div className="flex items-center gap-1.5">
           {selectedFactory ? (
             <>
@@ -204,59 +224,135 @@ export default function ScRow({ sc }: ScRowProps) {
           <div className="grid grid-cols-2 gap-6">
             {/* Left: Style & PO + Order Info */}
             <div className="space-y-4">
-              {/* Style & PO */}
               <div>
                 <h4 className="text-xs font-semibold text-brand-dark uppercase tracking-wider mb-2">
                   {t(lang, 'scStyleInfo')}
                 </h4>
                 <StyleTable sc={sc} />
               </div>
-
-              {/* Order Info */}
               <div>
                 <h4 className="text-xs font-semibold text-brand-dark uppercase tracking-wider mb-2">
                   {t(lang, 'scOrderInfo')}
                 </h4>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-brand-gray">{t(lang, 'scTradeTerm')}</span>
-                    <span className="font-medium">{sc.tradeTerm}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-brand-gray">{t(lang, 'scShipMode')}</span>
-                    <span className="font-medium">{sc.shipMode}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-brand-gray">{t(lang, 'scPaymentTerm')}</span>
-                    <span className="font-medium">{sc.paymentTerm}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-brand-gray">{t(lang, 'scSeason')}</span>
-                    <span className="font-medium">{sc.season}</span>
-                  </div>
-                  <div className="col-span-2 flex justify-between">
-                    <span className="text-brand-gray">{t(lang, 'scDropship')}</span>
-                    <span className="font-medium">{sc.dropshipDest}</span>
-                  </div>
+                  <div className="flex justify-between"><span className="text-brand-gray">{t(lang, 'scTradeTerm')}</span><span className="font-medium">{sc.tradeTerm}</span></div>
+                  <div className="flex justify-between"><span className="text-brand-gray">{t(lang, 'scShipMode')}</span><span className="font-medium">{sc.shipMode}</span></div>
+                  <div className="flex justify-between"><span className="text-brand-gray">{t(lang, 'scPaymentTerm')}</span><span className="font-medium">{sc.paymentTerm}</span></div>
+                  <div className="flex justify-between"><span className="text-brand-gray">{t(lang, 'scSeason')}</span><span className="font-medium">{sc.season}</span></div>
+                  <div className="col-span-2 flex justify-between"><span className="text-brand-gray">{t(lang, 'scDropship')}</span><span className="font-medium">{sc.dropshipDest}</span></div>
                 </div>
               </div>
             </div>
 
             {/* Right: Factory Selection */}
             <div>
-              <h4 className="text-xs font-semibold text-brand-dark uppercase tracking-wider mb-2">
-                {t(lang, 'scFactorySelection')}
-              </h4>
-              <div className="space-y-2">
-                {factories.map((fac, idx) => (
-                  <FactorySelectionRow
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-semibold text-brand-dark uppercase tracking-wider">
+                  {t(lang, 'scFactorySelection')}
+                </h4>
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="text-xs px-2.5 py-1 rounded bg-brand-brown text-white hover:bg-brand-brown/90 disabled:opacity-50 transition-colors flex items-center gap-1"
+                >
+                  {refreshing ? (
+                    <>
+                      <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      {t(lang, 'refreshing')}
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {t(lang, 'scUpdateFactory')}
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* OP-selected factories (reference only, no checkbox) */}
+              {opSelected.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[10px] text-brand-gray uppercase tracking-wider mb-1.5">
+                    {t(lang, 'scOpSelected')}
+                  </div>
+                  <div className="space-y-1.5">
+                    {opSelected.map((fac) => (
+                      <div key={fac.factoryId} className="border border-brand-brown/30 rounded-lg p-2.5 bg-brand-brown/5 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-brown/10 text-brand-brown font-medium">
+                            {t(lang, 'scOpSelectedBadge')}
+                          </span>
+                          {fac.factoryCode && <span className="text-brand-gray font-mono">{fac.factoryCode}</span>}
+                          <span className="font-medium text-brand-dark">{fac.factoryName}</span>
+                          <div className="ml-auto flex items-center gap-1.5">
+                            {fac.rating && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${fac.rating === 'A' ? 'bg-brand-brown text-white' : 'bg-brand-warm text-white'}`}>{fac.rating}</span>
+                            )}
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${capacityColor[fac.capacityStatus]}`}>
+                              {t(lang, capacityKey[fac.capacityStatus])}
+                            </span>
+                            {fac.selectionStatus === 'capacity_changed' && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">
+                                {t(lang, 'scCapacityChanged')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {fac.note && <div className="ml-1 mt-1 text-[10px] text-yellow-700 italic">{fac.note}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Selectable factories (radio single-select) */}
+              <div className="space-y-1.5">
+                {selectable.map((fac) => (
+                  <div
                     key={fac.factoryId}
-                    fac={fac}
-                    onToggle={() => handleToggleFactory(idx)}
-                  />
+                    onClick={() => setSelectedFactoryId(fac.factoryId === selectedFactoryId ? null : fac.factoryId)}
+                    className={`border rounded-lg p-2.5 text-xs cursor-pointer transition-colors ${
+                      fac.factoryId === selectedFactoryId ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                        fac.factoryId === selectedFactoryId ? 'border-brand-brown' : 'border-gray-300'
+                      }`}>
+                        {fac.factoryId === selectedFactoryId && <div className="w-2 h-2 rounded-full bg-brand-brown" />}
+                      </div>
+                      {fac.factoryCode && <span className="text-brand-gray font-mono">{fac.factoryCode}</span>}
+                      <span className="font-medium text-brand-dark">{fac.factoryName}</span>
+                      <div className="ml-auto flex items-center gap-1.5">
+                        {fac.rating && (
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${fac.rating === 'A' ? 'bg-brand-brown text-white' : 'bg-brand-warm text-white'}`}>{fac.rating}</span>
+                        )}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${capacityColor[fac.capacityStatus]}`}>
+                          {t(lang, capacityKey[fac.capacityStatus])}
+                        </span>
+                        {fac.selectionStatus === 'newly_available' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-blue-100 text-blue-700">
+                            {t(lang, 'scNewlyAvailable')}
+                          </span>
+                        )}
+                        {fac.supplierType === 'external' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 font-medium">
+                            {t(lang, 'noRating')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {fac.note && <div className="ml-5.5 mt-1 text-[10px] text-blue-600 italic">{fac.note}</div>}
+                  </div>
                 ))}
               </div>
-              {sc.status === 'pending' && (
+
+              {sc.status === 'pending' && selectedFactoryId && (
                 <button className="mt-3 text-xs px-3 py-1.5 rounded bg-brand-brown text-white hover:bg-brand-brown/90 transition-colors">
                   {t(lang, 'scPushToFactory')}
                 </button>
