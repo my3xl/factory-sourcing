@@ -1,7 +1,12 @@
+import type { ReactNode } from 'react';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 
-export default function Header() {
+interface HeaderProps {
+  children?: ReactNode;
+}
+
+export default function Header({ children }: HeaderProps) {
   const { lang, toggleLang } = useLang();
 
   return (
@@ -10,6 +15,12 @@ export default function Header() {
         <h1 className="text-lg font-semibold tracking-wide">LEVER STYLE</h1>
         <span className="text-sm text-white/60">|</span>
         <span className="text-sm text-white/80">{t(lang, 'appTitle')}</span>
+        {children && (
+          <>
+            <span className="text-sm text-white/60">|</span>
+            {children}
+          </>
+        )}
       </div>
       <button
         onClick={toggleLang}
