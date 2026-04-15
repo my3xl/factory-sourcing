@@ -25,11 +25,13 @@ export default function OpListPage() {
     setSampleIdx((i) => i + 1);
 
     const newId = `OP-${Date.now().toString().slice(-5)}`;
+    const opNum = `OP-${String(Date.now()).slice(-3)}`;
     sourceMap.current[newId] = sourceOpId;
 
     const newOp: Opportunity = {
       ...sourceOp,
       id: newId,
+      opNumber: opNum,
       status: 'open',
       createdAt: new Date().toISOString(),
       matchStatus: 'sourcing_needed' as MatchStatus,
@@ -93,7 +95,8 @@ export default function OpListPage() {
 
       <div className="bg-white rounded-lg border border-brand-border shadow-sm overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-[1.2fr_1fr_1fr_0.7fr_0.8fr_0.9fr_0.7fr_100px_1fr] gap-3 px-5 py-2.5 bg-gray-50 border-b border-brand-border text-xs font-medium text-brand-gray uppercase tracking-wider">
+        <div className="grid grid-cols-[80px_1.2fr_1fr_1fr_0.7fr_0.8fr_0.9fr_0.7fr_100px_1fr] gap-3 px-5 py-2.5 bg-gray-50 border-b border-brand-border text-xs font-medium text-brand-gray uppercase tracking-wider">
+          <span>{t(lang, 'tableOpId')}</span>
           <span>{t(lang, 'tableBrand')}</span>
           <span>{t(lang, 'tableCategory')}</span>
           <span>{t(lang, 'tableCOO')}</span>

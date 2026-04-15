@@ -3,6 +3,7 @@ export type MatchStatus = 'matched' | 'sourcing_needed' | 'no_match';
 
 export interface Opportunity {
   id: string;
+  opNumber: string;           // OP-XXX for SC association
   brand: string;
   brandCode: string;
   productCategory: string;

@@ -6,6 +6,7 @@ const translations = {
     pageTitle: 'Opportunity Pipeline',
     newOp: 'New Opportunity',
     // OP table
+    tableOpId: 'OP ID',
     tableBrand: 'Brand',
     tableCategory: 'Product Category',
     tableCOO: 'COO',
@@ -66,6 +67,7 @@ const translations = {
     pageTitle: '商机管线',
     newOp: '新建商机',
     // OP 表格
+    tableOpId: 'OP编号',
     tableBrand: '品牌',
     tableCategory: '品类',
     tableCOO: '产地要求',

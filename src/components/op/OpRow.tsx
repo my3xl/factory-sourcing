@@ -120,9 +120,10 @@ export default function OpRow({ op, isMatching, onMatchDone, dynamicMatchResult 
     <div className="border-b border-brand-border last:border-b-0">
       {/* Main row */}
       <div
-        className="grid grid-cols-[1.2fr_1fr_1fr_0.7fr_0.8fr_0.9fr_0.7fr_100px_1fr] gap-3 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
+        className="grid grid-cols-[80px_1.2fr_1fr_1fr_0.7fr_0.8fr_0.9fr_0.7fr_100px_1fr] gap-3 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
         onClick={() => setExpanded(!expanded)}
       >
+        <span className="text-xs text-brand-gray font-mono">{op.opNumber}</span>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-brand-gray font-mono">{op.brandCode}</span>
           <span className="font-medium text-brand-dark">{op.brand}</span>

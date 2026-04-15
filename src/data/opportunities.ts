@@ -3,6 +3,7 @@ import type { Opportunity } from '../types/opportunity';
 export const opportunities: Opportunity[] = [
   {
     id: 'OP-001',
+    opNumber: 'OP-001',
     brand: 'SPANX',
     brandCode: 'SPX',
     productCategory: 'Fleece Hoodie',
@@ -19,6 +20,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-002',
+    opNumber: 'OP-002',
     brand: 'CAMILLA',
     brandCode: 'CAI',
     productCategory: 'Silk Blouse',
@@ -35,6 +37,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-003',
+    opNumber: 'OP-003',
     brand: 'TODD SNYDER',
     brandCode: 'TSD',
     productCategory: 'Wool Blazer',
@@ -51,6 +54,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-004',
+    opNumber: 'OP-004',
     brand: 'R.M.WILLIAMS',
     brandCode: 'RMW',
     productCategory: 'Chino Pants',
@@ -67,6 +71,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-005',
+    opNumber: 'OP-005',
     brand: 'HERVIS SPORT + MODE',
     brandCode: 'BEG',
     productCategory: 'Down Jacket',
@@ -83,6 +88,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-006',
+    opNumber: 'OP-006',
     brand: 'ALLSAINTS',
     brandCode: 'ALS',
     productCategory: 'Leather Jacket',
@@ -99,6 +105,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-007',
+    opNumber: 'OP-007',
     brand: 'BODEN',
     brandCode: 'BDN',
     productCategory: 'Woven Shirt',
@@ -115,6 +122,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-008',
+    opNumber: 'OP-008',
     brand: 'THE BLACK TUX',
     brandCode: 'TBT',
     productCategory: 'Suit',
@@ -131,6 +139,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-009',
+    opNumber: 'OP-009',
     brand: 'ADONIS',
     brandCode: 'ADS',
     productCategory: 'Knit Polo',
@@ -147,6 +156,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-010',
+    opNumber: 'OP-010',
     brand: 'HENDERSON',
     brandCode: 'HDS',
     productCategory: 'Trench Coat',
@@ -163,6 +173,7 @@ export const opportunities: Opportunity[] = [
   },
   {
     id: 'OP-011',
+    opNumber: 'OP-011',
     brand: 'BONOBOS',
     brandCode: 'BON',
     productCategory: 'Chino Pants',
