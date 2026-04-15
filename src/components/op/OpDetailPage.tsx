@@ -118,7 +118,10 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
       matchedAt: op.matchedAt || new Date().toISOString(),
     });
     setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 2000);
+    setTimeout(() => {
+      setShowSuccess(false);
+      navigate({ page: 'op' });
+    }, 2000);
   };
 
   return (

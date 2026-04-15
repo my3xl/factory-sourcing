@@ -45,7 +45,7 @@ function Nav({ current, onChange }: { current: 'op' | 'sc'; onChange: (p: 'op' |
 }
 
 function AppContent() {
-  const [route, setRoute] = useState<Route>({ page: 'op' });
+  const [route, setRoute] = useState<Route>({ page: 'op-form' });
   const [opList, setOpList] = useState<Opportunity[]>(initialOpportunities);
   const [dynamicMatches, setDynamicMatches] = useState<Record<string, OpMatchResult>>({});
   const [sampleIdx, setSampleIdx] = useState(0);
