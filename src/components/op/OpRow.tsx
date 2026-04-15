@@ -106,7 +106,7 @@ export default function OpRow({ op }: OpRowProps) {
     <div className="border-b border-brand-border last:border-b-0">
       {/* Main row */}
       <div
-        className="grid grid-cols-9 gap-2 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
+        className="grid grid-cols-[1.2fr_1fr_1fr_0.7fr_0.8fr_0.9fr_0.7fr_100px_1fr] gap-3 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-1.5">
@@ -119,16 +119,16 @@ export default function OpRow({ op }: OpRowProps) {
         <span>{formatQty(op.qty, lang)}</span>
         <span>{formatDate(op.exFactoryDate, lang)}</span>
         <span>{op.accountManager}</span>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${opStatusColor[op.status]}`}>
+        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center ${opStatusColor[op.status]}`}>
           {t(lang, opStatusLabel[op.status])}
         </span>
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center gap-2">
           {refreshing ? (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">
+            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center bg-yellow-100 text-yellow-700 min-w-[90px]">
               {t(lang, 'matchMatching')}
             </span>
           ) : (
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${matchStatusColor[op.matchStatus]}`}>
+            <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center min-w-[90px] ${matchStatusColor[op.matchStatus]}`}>
               {t(lang, matchStatusLabel[op.matchStatus])}
             </span>
           )}
@@ -138,7 +138,7 @@ export default function OpRow({ op }: OpRowProps) {
             </span>
           )}
           <svg
-            className={`w-4 h-4 text-brand-gray transition-transform ${expanded ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-brand-gray transition-transform ml-auto ${expanded ? 'rotate-180' : ''}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
