@@ -129,11 +129,12 @@ export default function OpRow({ op, dynamicMatchResult, onClick }: OpRowProps) {
                 {t(lang, 'opBuSelected')}
               </div>
               <div className="flex flex-wrap gap-2">
-                {selectedFactories.map((f) => (
+                {selectedFactories.map((f, idx) => (
                   <span
                     key={f.id}
-                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg border border-brand-brown/30 bg-brand-brown/5"
+                    className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-brand-brown/30 bg-brand-brown/5"
                   >
+                    <span className="w-4 h-4 rounded-full bg-brand-brown text-white text-[10px] font-bold flex items-center justify-center leading-none">{idx + 1}</span>
                     {f.code && <span className="text-brand-gray font-mono text-[10px]">{f.code}</span>}
                     <span className="font-medium text-brand-dark">{f.name}</span>
                   </span>

@@ -6,16 +6,21 @@ import FactoryCard from './FactoryCard';
 
 interface MatchResultsProps {
   result: OpMatchResult;
-  selectedIds: Set<string>;
+  selectedOrder: string[]; // ordered list of selected factory IDs (index+1 = priority)
   onToggleSelect: (id: string) => void;
   selectable?: boolean;
 }
 
-export default function MatchResults({ result, selectedIds, onToggleSelect, selectable = true }: MatchResultsProps) {
+export default function MatchResults({ result, selectedOrder, onToggleSelect, selectable = true }: MatchResultsProps) {
   const { lang } = useLang();
   const [noCapacityOpen, setNoCapacityOpen] = useState(false);
 
   const hasNoCapacity = result.internalNoCapacity.length > 0;
+
+  const getOrder = (id: string): number | null => {
+    const idx = selectedOrder.indexOf(id);
+    return idx >= 0 ? idx + 1 : null;
+  };
 
   return (
     <div className="space-y-3">
@@ -34,9 +39,9 @@ export default function MatchResults({ result, selectedIds, onToggleSelect, sele
             <FactoryCard
               key={f.id}
               factory={f}
-              selected={selectedIds.has(f.id)}
+              selectionOrder={getOrder(f.id)}
               onToggleSelect={() => onToggleSelect(f.id)}
-              showCheckbox={selectable}
+              selectable={selectable}
             />
           ))}
         </div>
@@ -69,9 +74,9 @@ export default function MatchResults({ result, selectedIds, onToggleSelect, sele
                 <FactoryCard
                   key={f.id}
                   factory={f}
-                  selected={selectedIds.has(f.id)}
+                  selectionOrder={getOrder(f.id)}
                   onToggleSelect={() => onToggleSelect(f.id)}
-                  showCheckbox={selectable}
+                  selectable={selectable}
                 />
               ))}
             </div>
@@ -95,9 +100,9 @@ export default function MatchResults({ result, selectedIds, onToggleSelect, sele
               <FactoryCard
                 key={f.id}
                 factory={f}
-                selected={selectedIds.has(f.id)}
+                selectionOrder={getOrder(f.id)}
                 onToggleSelect={() => onToggleSelect(f.id)}
-                showCheckbox={selectable}
+                selectable={selectable}
               />
             ))}
           </div>

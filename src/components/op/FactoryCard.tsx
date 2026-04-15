@@ -6,14 +6,15 @@ import { FixedTooltip, RatingPopup, CapacityPopup, capacityColor, capacityKey, r
 
 interface FactoryCardProps {
   factory: Factory;
-  selected: boolean;
+  selectionOrder: number | null; // null = not selected, 1/2/3 = priority
   onToggleSelect: () => void;
-  showCheckbox?: boolean;
+  selectable?: boolean;
 }
 
-export default function FactoryCard({ factory, selected, onToggleSelect, showCheckbox = true }: FactoryCardProps) {
+export default function FactoryCard({ factory, selectionOrder, onToggleSelect, selectable = true }: FactoryCardProps) {
   const { lang } = useLang();
   const isExternal = factory.supplierType === 'external';
+  const isSelected = selectionOrder !== null;
 
   const ratingRef = useRef<HTMLSpanElement>(null);
   const capacityRef = useRef<HTMLSpanElement>(null);
@@ -22,18 +23,24 @@ export default function FactoryCard({ factory, selected, onToggleSelect, showChe
 
   return (
     <>
-      <div className={`border rounded-lg p-3 text-sm transition-colors ${
-        selected ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white'
-      }`}>
-        {/* Row 1: Name + Score + Badges */}
+      <div
+        onClick={selectable ? onToggleSelect : undefined}
+        className={`border rounded-lg p-3 text-sm transition-colors ${
+          selectable ? 'cursor-pointer' : ''
+        } ${
+          isSelected ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white hover:border-gray-300'
+        }`}
+      >
+        {/* Row 1: Number + Name + Score + Badges */}
         <div className="flex items-center gap-2 mb-2">
-          {showCheckbox && (
-            <input
-              type="checkbox"
-              checked={selected}
-              onChange={onToggleSelect}
-              className="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown cursor-pointer"
-            />
+          {selectable && (
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${
+              isSelected
+                ? 'border-brand-brown bg-brand-brown text-white'
+                : 'border-gray-300 text-transparent'
+            }`}>
+              <span className="text-xs font-bold leading-none">{selectionOrder ?? ''}</span>
+            </div>
           )}
           <span className="font-medium text-brand-dark">{factory.name}</span>
           {factory.code && (
@@ -90,7 +97,7 @@ export default function FactoryCard({ factory, selected, onToggleSelect, showChe
         </div>
 
         {/* Row 2: Details */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-gray ml-6">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-brand-gray ml-8">
           <span>{t(lang, 'location')}: {factory.location}</span>
           <span>{t(lang, 'categories')}: {factory.productCategories.join(', ')}</span>
           {isExternal && factory.hscodes && (
@@ -105,7 +112,7 @@ export default function FactoryCard({ factory, selected, onToggleSelect, showChe
         </div>
 
         {/* Row 3: Match reasons */}
-        <div className="flex flex-wrap gap-1 mt-1.5 ml-6">
+        <div className="flex flex-wrap gap-1 mt-1.5 ml-8">
           {factory.matchReasons.map((reason, i) => (
             <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-brand-gray">
               {reason}
@@ -115,7 +122,7 @@ export default function FactoryCard({ factory, selected, onToggleSelect, showChe
 
         {/* External pending note */}
         {isExternal && (
-          <div className="ml-6 mt-1.5 text-[10px] text-gray-400 italic">
+          <div className="ml-8 mt-1.5 text-[10px] text-gray-400 italic">
             {t(lang, 'externalPendingNote')}
           </div>
         )}

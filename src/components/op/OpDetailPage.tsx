@@ -66,8 +66,8 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
   const op = opList.find((o) => o.id === opId);
   const isNew = op?.matchedAt === '';
   const [isMatching, setIsMatching] = useState(isNew);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    new Set(op?.selectedFactoryIds ?? [])
+  const [selectedOrder, setSelectedOrder] = useState<string[]>(
+    op?.selectedFactoryIds ?? []
   );
   const [showSuccess, setShowSuccess] = useState(false);
   const [maxSelectWarning, setMaxSelectWarning] = useState(false);
@@ -109,26 +109,24 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
   const totalMatched = isMatching ? 0 : getMatchCount(result);
 
   const handleToggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+    setSelectedOrder((prev) => {
+      if (prev.includes(id)) {
         setMaxSelectWarning(false);
+        return prev.filter((fid) => fid !== id);
       } else {
-        if (next.size >= 3) {
+        if (prev.length >= 3) {
           setMaxSelectWarning(true);
           return prev;
         }
-        next.add(id);
         setMaxSelectWarning(false);
+        return [...prev, id];
       }
-      return next;
     });
   };
 
   const handleSubmit = () => {
     onUpdateOp(opId, {
-      selectedFactoryIds: [...selectedIds],
+      selectedFactoryIds: [...selectedOrder],
       matchStatus: totalMatched > 0 ? 'matched' : op.matchStatus,
       matchedCount: totalMatched || op.matchedCount,
       matchedAt: op.matchedAt || new Date().toISOString(),
@@ -240,9 +238,9 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
               <span className="text-xs text-brand-gray">
                 {t(lang, 'opDetailMatched')} — {t(lang, 'matchingCount', { count: displayMatchCount })}
               </span>
-              {selectedIds.size > 0 && (
+              {selectedOrder.length > 0 && (
                 <span className="text-xs text-brand-brown font-medium">
-                  {t(lang, 'buSelect')}: {selectedIds.size}
+                  {t(lang, 'buSelect')}: {selectedOrder.length}
                 </span>
               )}
             </div>
@@ -255,7 +253,7 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
 
             <MatchResults
               result={result}
-              selectedIds={selectedIds}
+              selectedOrder={selectedOrder}
               onToggleSelect={handleToggleSelect}
               selectable
             />
@@ -264,11 +262,11 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
             <div className="mt-6 pt-4 border-t border-gray-100">
               <button
                 onClick={handleSubmit}
-                disabled={selectedIds.size === 0}
+                disabled={selectedOrder.length === 0}
                 className="w-full py-2.5 rounded-lg bg-brand-brown text-white font-medium hover:bg-brand-brown/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
               >
-                {selectedIds.size > 0
-                  ? t(lang, 'opDetailSubmitCount', { count: selectedIds.size })
+                {selectedOrder.length > 0
+                  ? t(lang, 'opDetailSubmitCount', { count: selectedOrder.length })
                   : t(lang, 'opDetailSubmit')
                 }
               </button>
