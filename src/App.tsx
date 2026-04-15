@@ -94,27 +94,6 @@ function AppContent() {
     );
   }, []);
 
-  const handleMatchDone = useCallback((opId: string) => {
-    const sourceSampleId = sampleOpIds[0];
-    const matchResult = staticMatchResults[sourceSampleId];
-    const count = matchResult
-      ? matchResult.internalWithCapacity.length + matchResult.internalNoCapacity.length + matchResult.external.length
-      : 0;
-
-    setOpList((prev) =>
-      prev.map((op) =>
-        op.id === opId
-          ? {
-              ...op,
-              matchStatus: (count > 0 ? 'matched' : 'sourcing_needed') as MatchStatus,
-              matchedAt: new Date().toISOString(),
-              matchedCount: count,
-            }
-          : op
-      )
-    );
-  }, []);
-
   // SC handlers
   const handleCreateSc = useCallback((sc: SalesContract) => {
     setScList((prev) => [sc, ...prev]);
@@ -152,7 +131,6 @@ function AppContent() {
           opList={opList}
           dynamicMatches={dynamicMatches}
           onUpdateOp={handleUpdateOp}
-          onMatchDone={handleMatchDone}
           navigate={navigate}
         />
       )}

@@ -53,11 +53,15 @@ interface OpDetailPageProps {
   opList: Opportunity[];
   dynamicMatches: Record<string, OpMatchResult>;
   onUpdateOp: (opId: string, updates: Partial<Opportunity>) => void;
-  onMatchDone: (opId: string) => void;
   navigate: (r: Route) => void;
 }
 
-export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp, onMatchDone, navigate }: OpDetailPageProps) {
+function getMatchCount(result: OpMatchResult | undefined): number {
+  if (!result) return 0;
+  return result.internalWithCapacity.length + result.internalNoCapacity.length + result.external.length;
+}
+
+export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp, navigate }: OpDetailPageProps) {
   const { lang } = useLang();
   const op = opList.find((o) => o.id === opId);
   const isNew = op?.matchedAt === '';
@@ -68,16 +72,31 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
   const [showSuccess, setShowSuccess] = useState(false);
   const [maxSelectWarning, setMaxSelectWarning] = useState(false);
 
+  // Track display match status/count locally for consistency
+  const result = dynamicMatches[opId] ?? matchResults[op?.id ?? ''];
+  const [displayMatchCount, setDisplayMatchCount] = useState(
+    isMatching ? 0 : getMatchCount(result)
+  );
+
   // Auto-match for new OPs
   useEffect(() => {
     if (isMatching) {
       const timer = setTimeout(() => {
         setIsMatching(false);
-        onMatchDone(opId);
+        // Compute count from actual match result
+        const matchResult = dynamicMatches[opId] ?? matchResults[op?.id ?? ''];
+        const count = getMatchCount(matchResult);
+        setDisplayMatchCount(count);
+        const newStatus = count > 0 ? 'matched' : 'sourcing_needed';
+        onUpdateOp(opId, {
+          matchStatus: newStatus as MatchStatus,
+          matchedAt: new Date().toISOString(),
+          matchedCount: count,
+        });
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isMatching, opId, onMatchDone]);
+  }, [isMatching, opId, op?.id, dynamicMatches, onUpdateOp]);
 
   if (!op) {
     return (
@@ -87,10 +106,7 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
     );
   }
 
-  const result = dynamicMatches[opId] ?? matchResults[op.id];
-  const totalMatched = result
-    ? result.internalWithCapacity.length + result.internalNoCapacity.length + result.external.length
-    : 0;
+  const totalMatched = isMatching ? 0 : getMatchCount(result);
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -147,10 +163,24 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
             <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${opStatusColor[op.status]}`}>
               {t(lang, opStatusLabel[op.status])}
             </span>
-            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${matchStatusColor[op.matchStatus]}`}>
-              {t(lang, matchStatusLabel[op.matchStatus])}
-              {op.matchStatus === 'matched' && op.matchedCount > 0 && ` (${op.matchedCount})`}
-            </span>
+            {isMatching ? (
+              <span className="inline-flex items-center justify-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700 min-w-[120px]">
+                <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                {t(lang, 'matchMatching')}
+              </span>
+            ) : (
+              <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                op.matchStatus === 'matched' ? matchStatusColor.matched :
+                op.matchStatus === 'sourcing_needed' ? matchStatusColor.sourcing_needed :
+                matchStatusColor.no_match
+              }`}>
+                {t(lang, matchStatusLabel[op.matchStatus])}
+                {op.matchStatus === 'matched' && displayMatchCount > 0 && ` (${displayMatchCount})`}
+              </span>
+            )}
           </div>
         </div>
 
@@ -208,7 +238,7 @@ export default function OpDetailPage({ opId, opList, dynamicMatches, onUpdateOp,
           <>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-brand-gray">
-                {t(lang, 'opDetailMatched')} — {t(lang, 'matchingCount', { count: totalMatched })}
+                {t(lang, 'opDetailMatched')} — {t(lang, 'matchingCount', { count: displayMatchCount })}
               </span>
               {selectedIds.size > 0 && (
                 <span className="text-xs text-brand-brown font-medium">
