@@ -162,11 +162,8 @@ export default function OpRow({ op, isMatching, onMatchDone, dynamicMatchResult 
       </div>
 
       {/* Expanded match results */}
-      <div
-        className={`overflow-visible transition-all duration-300 ${
-          expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-        }`}
-      >
+      {expanded && (
+      <div>
         <div className="px-5 pb-4 pt-1 bg-brand-cream/50 border-t border-brand-border">
           {/* Header: match time + refresh + BU selection count */}
           <div className="flex items-center justify-between mb-3">
@@ -216,6 +213,7 @@ export default function OpRow({ op, isMatching, onMatchDone, dynamicMatchResult 
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
