@@ -4,6 +4,7 @@ const translations = {
   en: {
     appTitle: 'Factory Sourcing',
     pageTitle: 'Opportunity Pipeline',
+    newOp: 'New Opportunity',
     // OP table
     tableBrand: 'Brand',
     tableCategory: 'Product Category',
@@ -63,6 +64,7 @@ const translations = {
   zh: {
     appTitle: '工厂寻源',
     pageTitle: '商机管线',
+    newOp: '新建商机',
     // OP 表格
     tableBrand: '品牌',
     tableCategory: '品类',

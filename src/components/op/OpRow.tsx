@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { Opportunity, OpStatus, MatchStatus } from '../../types/opportunity';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
@@ -70,14 +70,26 @@ function getTotalMatchCount(opId: string): number {
 
 interface OpRowProps {
   op: Opportunity;
+  isMatching?: boolean;
+  onMatchDone?: () => void;
 }
 
-export default function OpRow({ op }: OpRowProps) {
+export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
   const { lang } = useLang();
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [matchedAt, setMatchedAt] = useState(op.matchedAt);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Auto-match for new OPs
+  React.useEffect(() => {
+    if (isMatching) {
+      const timer = setTimeout(() => {
+        onMatchDone?.();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isMatching, onMatchDone]);
 
   const result = matchResults[op.id];
   const totalMatched = getTotalMatchCount(op.id);
@@ -123,18 +135,18 @@ export default function OpRow({ op }: OpRowProps) {
           {t(lang, opStatusLabel[op.status])}
         </span>
         <div className="flex items-center gap-2">
-          {refreshing ? (
-            <span className="inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center bg-yellow-100 text-yellow-700 min-w-[90px]">
+          {(refreshing || isMatching) ? (
+            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium text-center bg-yellow-100 text-yellow-700 min-w-[90px]">
+              <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
               {t(lang, 'matchMatching')}
             </span>
           ) : (
-            <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center min-w-[90px] ${matchStatusColor[op.matchStatus]}`}>
+            <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-medium text-center min-w-[90px] ${matchStatusColor[op.matchStatus]}`}>
               {t(lang, matchStatusLabel[op.matchStatus])}
-            </span>
-          )}
-          {op.matchStatus === 'matched' && totalMatched > 0 && (
-            <span className="text-[10px] text-brand-gray">
-              {totalMatched}
+              {op.matchStatus === 'matched' && totalMatched > 0 && ` (${totalMatched})`}
             </span>
           )}
           <svg
