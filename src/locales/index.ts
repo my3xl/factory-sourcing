@@ -4,6 +4,7 @@ const translations = {
   en: {
     appTitle: 'Factory Sourcing',
     pageTitle: 'Opportunity Pipeline',
+    // OP table
     tableBrand: 'Brand',
     tableCategory: 'Product Category',
     tableCOO: 'COO',
@@ -11,6 +12,20 @@ const translations = {
     tableQty: 'Qty',
     tableExFactory: 'ExFactory Date',
     tableAM: 'Account Manager',
+    tableMatchStatus: 'Match Status',
+    tableCreatedAt: 'Created',
+    tableOpStatus: 'OP Status',
+    // OP status
+    opOpen: 'Open',
+    opInProgress: 'In Progress',
+    opWon: 'Won',
+    opLost: 'Lost',
+    // Match status
+    matchMatched: 'Matched',
+    matchMatching: 'Matching...',
+    matchSourcingNeeded: 'Sourcing Needed',
+    matchNoMatch: 'No Match',
+    // Matching UI
     matchedAgo: 'Matched {time} ago',
     matchedJustNow: 'Matched just now',
     refreshMatch: 'Refresh',
@@ -46,6 +61,7 @@ const translations = {
   zh: {
     appTitle: '工厂寻源',
     pageTitle: '商机管线',
+    // OP 表格
     tableBrand: '品牌',
     tableCategory: '品类',
     tableCOO: '产地要求',
@@ -53,6 +69,20 @@ const translations = {
     tableQty: '预计数量',
     tableExFactory: '预计离厂日',
     tableAM: '负责人',
+    tableMatchStatus: '匹配状态',
+    tableCreatedAt: '创建时间',
+    tableOpStatus: 'OP状态',
+    // OP 状态
+    opOpen: '待处理',
+    opInProgress: '进行中',
+    opWon: '赢单',
+    opLost: '输单',
+    // 匹配状态
+    matchMatched: '已匹配',
+    matchMatching: '匹配中...',
+    matchSourcingNeeded: '需寻源',
+    matchNoMatch: '无匹配',
+    // 匹配 UI
     matchedAgo: '{time}前完成匹配',
     matchedJustNow: '刚刚完成匹配',
     refreshMatch: '刷新匹配',

@@ -12,7 +12,7 @@ export default function OpListPage() {
 
       <div className="bg-white rounded-lg border border-brand-border shadow-sm overflow-hidden">
         {/* Table header */}
-        <div className="grid grid-cols-8 gap-2 px-5 py-2.5 bg-gray-50 border-b border-brand-border text-xs font-medium text-brand-gray uppercase tracking-wider">
+        <div className="grid grid-cols-9 gap-2 px-5 py-2.5 bg-gray-50 border-b border-brand-border text-xs font-medium text-brand-gray uppercase tracking-wider">
           <span>{t(lang, 'tableBrand')}</span>
           <span>{t(lang, 'tableCategory')}</span>
           <span>{t(lang, 'tableCOO')}</span>
@@ -20,7 +20,8 @@ export default function OpListPage() {
           <span>{t(lang, 'tableQty')}</span>
           <span>{t(lang, 'tableExFactory')}</span>
           <span>{t(lang, 'tableAM')}</span>
-          <span className="text-right">Status</span>
+          <span>{t(lang, 'tableOpStatus')}</span>
+          <span className="text-right">{t(lang, 'tableMatchStatus')}</span>
         </div>
 
         {/* Table body */}

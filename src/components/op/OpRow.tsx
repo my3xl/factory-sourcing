@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { Opportunity } from '../../types/opportunity';
+import { useState } from 'react';
+import type { Opportunity, OpStatus, MatchStatus } from '../../types/opportunity';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 import { matchResults } from '../../data/factories';
@@ -36,17 +36,38 @@ function formatQty(qty: number, lang: 'en' | 'zh'): string {
   return t(lang, 'qtyDisplay', { qty: qty.toLocaleString() });
 }
 
+const opStatusLabel: Record<OpStatus, 'opOpen' | 'opInProgress' | 'opWon' | 'opLost'> = {
+  open: 'opOpen',
+  in_progress: 'opInProgress',
+  won: 'opWon',
+  lost: 'opLost',
+};
+
+const opStatusColor: Record<OpStatus, string> = {
+  open: 'bg-gray-100 text-gray-600',
+  in_progress: 'bg-blue-100 text-blue-700',
+  won: 'bg-green-100 text-green-700',
+  lost: 'bg-red-100 text-red-600',
+};
+
+const matchStatusLabel: Record<MatchStatus, 'matchMatched' | 'matchMatching' | 'matchSourcingNeeded' | 'matchNoMatch'> = {
+  matched: 'matchMatched',
+  matching: 'matchMatching',
+  sourcing_needed: 'matchSourcingNeeded',
+  no_match: 'matchNoMatch',
+};
+
+const matchStatusColor: Record<MatchStatus, string> = {
+  matched: 'bg-green-100 text-green-700',
+  matching: 'bg-yellow-100 text-yellow-700',
+  sourcing_needed: 'bg-orange-100 text-orange-700',
+  no_match: 'bg-red-100 text-red-600',
+};
+
 function getTotalMatchCount(opId: string): number {
   const r = matchResults[opId];
   if (!r) return 0;
   return r.internalWithCapacity.length + r.internalNoCapacity.length + r.external.length;
-}
-
-function getTop3Ids(opId: string): Set<string> {
-  const r = matchResults[opId];
-  if (!r) return new Set();
-  const all = [...r.internalWithCapacity, ...r.external].sort((a, b) => b.matchScore - a.matchScore);
-  return new Set(all.slice(0, 3).map((f) => f.id));
 }
 
 interface OpRowProps {
@@ -58,14 +79,10 @@ export default function OpRow({ op }: OpRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [matchedAt, setMatchedAt] = useState(op.matchedAt);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => getTop3Ids(op.id));
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const result = matchResults[op.id];
   const totalMatched = getTotalMatchCount(op.id);
-
-  useEffect(() => {
-    setSelectedIds(getTop3Ids(op.id));
-  }, [op.id]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -91,22 +108,31 @@ export default function OpRow({ op }: OpRowProps) {
     <div className="border-b border-brand-border last:border-b-0">
       {/* Main row */}
       <div
-        className="grid grid-cols-8 gap-2 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
+        className="grid grid-cols-9 gap-2 px-5 py-3 items-center cursor-pointer hover:bg-brand-brown/5 transition-colors text-sm"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="font-medium text-brand-dark">{op.brand}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] text-brand-gray font-mono">{op.brandCode}</span>
+          <span className="font-medium text-brand-dark">{op.brand}</span>
+        </div>
         <span className="text-brand-warm">{op.productCategory}</span>
-        <span>{op.coo}</span>
+        <span className="text-xs">{op.coo.join(', ')}</span>
         <span className="text-brand-brown font-medium">{formatPrice(op.unitPrice, lang)}</span>
         <span>{formatQty(op.qty, lang)}</span>
         <span>{formatDate(op.exFactoryDate, lang)}</span>
         <span>{op.accountManager}</span>
+        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${opStatusColor[op.status]}`}>
+          {t(lang, opStatusLabel[op.status])}
+        </span>
         <div className="flex items-center justify-end gap-2">
-          <span className="text-xs text-brand-gray">
-            {totalMatched > 0
-              ? t(lang, 'matchingCount', { count: totalMatched })
-              : formatRelativeTime(matchedAt, lang)}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${matchStatusColor[op.matchStatus]}`}>
+            {t(lang, matchStatusLabel[op.matchStatus])}
           </span>
+          {op.matchStatus === 'matched' && totalMatched > 0 && (
+            <span className="text-[10px] text-brand-gray">
+              {totalMatched}
+            </span>
+          )}
           <svg
             className={`w-4 h-4 text-brand-gray transition-transform ${expanded ? 'rotate-180' : ''}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor"

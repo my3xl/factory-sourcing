@@ -1,12 +1,19 @@
+export type OpStatus = 'open' | 'in_progress' | 'won' | 'lost';
+export type MatchStatus = 'matched' | 'matching' | 'sourcing_needed' | 'no_match';
+
 export interface Opportunity {
   id: string;
   brand: string;
+  brandCode: string;
   productCategory: string;
-  coo: string;
+  coo: string[];
   unitPrice: number;
   qty: number;
   exFactoryDate: string;
   accountManager: string;
+  status: OpStatus;
+  createdAt: string;
+  matchStatus: MatchStatus;
   matchedAt: string;
   matchedCount: number;
 }
