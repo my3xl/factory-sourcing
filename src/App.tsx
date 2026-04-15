@@ -7,16 +7,20 @@ import OpListPage from './components/op/OpListPage';
 import OpFormPage from './components/op/OpFormPage';
 import OpDetailPage from './components/op/OpDetailPage';
 import ScListPage from './components/sc/ScListPage';
+import ScDetailPage from './components/sc/ScDetailPage';
 import { opportunities as initialOpportunities } from './data/opportunities';
+import { salesContracts as initialScList } from './data/salesContracts';
 import { matchResults as staticMatchResults } from './data/factories';
 import type { Opportunity, MatchStatus } from './types/opportunity';
 import type { OpMatchResult } from './types/factory';
+import type { SalesContract } from './types/salesContract';
 
 export type Route =
   | { page: 'op' }
   | { page: 'sc' }
   | { page: 'op-form' }
-  | { page: 'op-detail'; opId: string };
+  | { page: 'op-detail'; opId: string }
+  | { page: 'sc-detail'; scId: string };
 
 const sampleOpIds = Object.keys(staticMatchResults);
 
@@ -47,11 +51,13 @@ function Nav({ current, onChange }: { current: 'op' | 'sc'; onChange: (p: 'op' |
 function AppContent() {
   const [route, setRoute] = useState<Route>({ page: 'op-form' });
   const [opList, setOpList] = useState<Opportunity[]>(initialOpportunities);
+  const [scList, setScList] = useState<SalesContract[]>(initialScList);
   const [dynamicMatches, setDynamicMatches] = useState<Record<string, OpMatchResult>>({});
   const [sampleIdx, setSampleIdx] = useState(0);
 
   const navigate = useCallback((r: Route) => setRoute(r), []);
 
+  // OP handlers
   const handleCreateOp = useCallback((formData: Partial<Opportunity>) => {
     const sourceOpId = sampleOpIds[sampleIdx % sampleOpIds.length];
     setSampleIdx((i) => i + 1);
@@ -109,14 +115,23 @@ function AppContent() {
     );
   }, []);
 
+  // SC handlers
+  const handleCreateSc = useCallback((sc: SalesContract) => {
+    setScList((prev) => [sc, ...prev]);
+  }, []);
+
+  const handleUpdateSc = useCallback((scId: string, updates: Partial<SalesContract>) => {
+    setScList((prev) =>
+      prev.map((sc) => (sc.id === scId ? { ...sc, ...updates } : sc))
+    );
+  }, []);
+
+  const navCurrent: 'op' | 'sc' = route.page === 'sc' || route.page === 'sc-detail' ? 'sc' : 'op';
+
   return (
     <div className="min-h-screen bg-brand-cream">
       <Header>
-        {route.page === 'sc' ? (
-          <Nav current="sc" onChange={(p) => navigate({ page: p })} />
-        ) : (
-          <Nav current="op" onChange={(p) => navigate({ page: p })} />
-        )}
+        <Nav current={navCurrent} onChange={(p) => navigate({ page: p })} />
       </Header>
       {route.page === 'op' && (
         <OpListPage
@@ -141,7 +156,21 @@ function AppContent() {
           navigate={navigate}
         />
       )}
-      {route.page === 'sc' && <ScListPage />}
+      {route.page === 'sc' && (
+        <ScListPage
+          scList={scList}
+          navigate={navigate}
+          onCreateSc={handleCreateSc}
+        />
+      )}
+      {route.page === 'sc-detail' && (
+        <ScDetailPage
+          scId={route.scId}
+          scList={scList}
+          onUpdateSc={handleUpdateSc}
+          navigate={navigate}
+        />
+      )}
     </div>
   );
 }

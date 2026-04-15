@@ -1,14 +1,35 @@
-import { salesContracts } from '../../data/salesContracts';
+import { useState } from 'react';
+import type { SalesContract } from '../../types/salesContract';
+import type { Route } from '../../App';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 import ScRow from './ScRow';
+import ScFormModal from './ScFormModal';
 
-export default function ScListPage() {
+interface ScListPageProps {
+  scList: SalesContract[];
+  navigate: (r: Route) => void;
+  onCreateSc: (sc: SalesContract) => void;
+}
+
+export default function ScListPage({ scList, navigate, onCreateSc }: ScListPageProps) {
   const { lang } = useLang();
+  const [showModal, setShowModal] = useState(false);
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-6">
-      <h2 className="text-xl font-semibold text-brand-dark mb-4">{t(lang, 'scPageTitle')}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-brand-dark">{t(lang, 'scPageTitle')}</h2>
+        <button
+          onClick={() => setShowModal(true)}
+          className="text-sm px-4 py-2 rounded-lg bg-brand-brown text-white hover:bg-brand-brown/90 transition-colors flex items-center gap-1.5"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          {t(lang, 'scNewTitle')}
+        </button>
+      </div>
 
       <div className="bg-white rounded-lg border border-brand-border shadow-sm overflow-hidden">
         {/* Table header */}
@@ -26,11 +47,22 @@ export default function ScListPage() {
 
         {/* Table body */}
         <div>
-          {salesContracts.map((sc) => (
-            <ScRow key={sc.id} sc={sc} />
+          {scList.map((sc) => (
+            <ScRow
+              key={sc.id}
+              sc={sc}
+              onClick={() => navigate({ page: 'sc-detail', scId: sc.id })}
+            />
           ))}
         </div>
       </div>
+
+      {showModal && (
+        <ScFormModal
+          onClose={() => setShowModal(false)}
+          onCreateSc={onCreateSc}
+        />
+      )}
     </div>
   );
 }
