@@ -8,6 +8,7 @@ import OpFormPage from './components/op/OpFormPage';
 import OpDetailPage from './components/op/OpDetailPage';
 import ScListPage from './components/sc/ScListPage';
 import ScDetailPage from './components/sc/ScDetailPage';
+import NetworkPage from './components/network/NetworkPage';
 import { opportunities as initialOpportunities } from './data/opportunities';
 import { salesContracts as initialScList } from './data/salesContracts';
 import { matchResults as staticMatchResults } from './data/factories';
@@ -20,11 +21,12 @@ export type Route =
   | { page: 'sc' }
   | { page: 'op-form' }
   | { page: 'op-detail'; opId: string }
-  | { page: 'sc-detail'; scId: string };
+  | { page: 'sc-detail'; scId: string }
+  | { page: 'network' };
 
 const sampleOpIds = Object.keys(staticMatchResults);
 
-function Nav({ current, onChange }: { current: 'op' | 'sc'; onChange: (p: 'op' | 'sc') => void }) {
+function Nav({ current, onChange }: { current: 'op' | 'sc' | 'network'; onChange: (p: 'op' | 'sc' | 'network') => void }) {
   const { lang } = useLang();
   return (
     <div className="flex gap-1 bg-white/10 rounded-lg p-0.5">
@@ -43,6 +45,14 @@ function Nav({ current, onChange }: { current: 'op' | 'sc'; onChange: (p: 'op' |
         }`}
       >
         {t(lang, 'navSc')}
+      </button>
+      <button
+        onClick={() => onChange('network')}
+        className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+          current === 'network' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
+        }`}
+      >
+        {t(lang, 'navNetwork')}
       </button>
     </div>
   );
@@ -106,7 +116,7 @@ function AppContent() {
     );
   }, []);
 
-  const navCurrent: 'op' | 'sc' = route.page === 'sc' || route.page === 'sc-detail' ? 'sc' : 'op';
+  const navCurrent: 'op' | 'sc' | 'network' = route.page === 'network' ? 'network' : route.page === 'sc' || route.page === 'sc-detail' ? 'sc' : 'op';
 
   return (
     <div className="min-h-screen bg-brand-cream">
@@ -149,6 +159,9 @@ function AppContent() {
           onUpdateSc={handleUpdateSc}
           navigate={navigate}
         />
+      )}
+      {route.page === 'network' && (
+        <NetworkPage />
       )}
     </div>
   );
