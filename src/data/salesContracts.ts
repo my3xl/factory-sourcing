@@ -1,6 +1,4 @@
 import type { SalesContract, FactorySelection } from '../types/salesContract';
-import { matchResults } from './factories';
-import { opportunities } from './opportunities';
 
 export const salesContracts: SalesContract[] = [
   {
@@ -139,9 +137,9 @@ export const salesContracts: SalesContract[] = [
     paymentTerm: 'Net 60',
     season: 'SS25',
     factorySelections: [
-      { factoryId: 'F-005', factoryName: 'Porto Alves Tailoring', factoryCode: 'VMPRT', supplierType: 'internal', rating: 'A', capacityStatus: 'tight', selectionStatus: 'capacity_changed', selected: false, note: 'Capacity changed: Available → Tight' },
-      { factoryId: 'F-004', factoryName: 'Phnom Penh Silk Road', factoryCode: 'VMHYG', supplierType: 'internal', rating: 'B', capacityStatus: 'available', selectionStatus: 'confirmed', selected: true },
-      { factoryId: 'X-007', factoryName: 'Siem Reap Textile Works', factoryCode: '', supplierType: 'external', capacityStatus: 'available', selectionStatus: 'newly_available', selected: false, note: 'External sourcing confirmed — now available for selection' },
+      { factoryId: 'F-005', factoryName: 'Porto Alves Tailoring', factoryCode: 'VMPRT', supplierType: 'internal', rating: 'A', capacityStatus: 'tight', selectionStatus: 'capacity_changed', selected: false, opPriority: 1, note: 'Capacity changed: Available → Tight' },
+      { factoryId: 'F-004', factoryName: 'Phnom Penh Silk Road', factoryCode: 'VMHYG', supplierType: 'internal', rating: 'B', capacityStatus: 'available', selectionStatus: 'confirmed', selected: false, opPriority: 2 },
+      { factoryId: 'X-007', factoryName: 'Siem Reap Textile Works', factoryCode: '', supplierType: 'external', capacityStatus: 'available', selectionStatus: 'newly_available', selected: false, opPriority: 3, note: 'External sourcing confirmed — now available for selection' },
     ],
   },
   {
@@ -175,9 +173,9 @@ export const salesContracts: SalesContract[] = [
     paymentTerm: 'Net 45',
     season: 'FW25',
     factorySelections: [
-      { factoryId: 'F-001', factoryName: 'Ho Chi Minh Thanh Binh', factoryCode: 'VMLTD', supplierType: 'internal', rating: 'A', capacityStatus: 'available', selectionStatus: 'confirmed', selected: true },
-      { factoryId: 'F-008', factoryName: 'Bandung Cipta Garment', factoryCode: 'VMBDG', supplierType: 'internal', rating: 'B', capacityStatus: 'available', selectionStatus: 'confirmed', selected: false },
-      { factoryId: 'X-010', factoryName: 'Binh Duong Knit Mfg', factoryCode: '', supplierType: 'external', capacityStatus: 'available', selectionStatus: 'newly_available', selected: false, note: 'External sourcing confirmed — now available for selection' },
+      { factoryId: 'F-001', factoryName: 'Ho Chi Minh Thanh Binh', factoryCode: 'VMLTD', supplierType: 'internal', rating: 'A', capacityStatus: 'available', selectionStatus: 'confirmed', selected: false, opPriority: 1 },
+      { factoryId: 'F-008', factoryName: 'Bandung Cipta Garment', factoryCode: 'VMBDG', supplierType: 'internal', rating: 'B', capacityStatus: 'available', selectionStatus: 'confirmed', selected: false, opPriority: 2 },
+      { factoryId: 'X-010', factoryName: 'Binh Duong Knit Mfg', factoryCode: '', supplierType: 'external', capacityStatus: 'available', selectionStatus: 'newly_available', selected: false, opPriority: 3, note: 'External sourcing confirmed — now available for selection' },
     ],
   },
   {
@@ -215,58 +213,79 @@ export const salesContracts: SalesContract[] = [
   },
 ];
 
-// Helper: simulate capacity changes in SC stage
-function simCap(f: { id: string; capacityStatus?: string }): 'available' | 'tight' | 'full' {
-  if (f.id === 'F-001') return 'full';
-  if (f.id === 'F-005') return 'tight';
-  return (f.capacityStatus as 'available' | 'tight' | 'full') ?? 'available';
-}
+// --- Factory pool for SC demo (independent of OP data) ---
 
-// Convert OP BU-selected factories into SC factory selections (with priority order)
-function matchToFactorySelections(opId: string): FactorySelection[] {
-  const result = matchResults[opId];
-  if (!result) return [];
-  const allFactories = [
-    ...result.internalWithCapacity,
-    ...result.internalNoCapacity,
-    ...result.external,
-  ];
+const internalPool: { id: string; name: string; code: string; rating: 'A' | 'B'; capacityStatus: 'available' | 'tight' | 'full' }[] = [
+  { id: 'F-001', name: 'Ho Chi Minh Thanh Binh', code: 'VMLTD', rating: 'A', capacityStatus: 'available' },
+  { id: 'F-002', name: 'Phnom Penh Mekong Garment', code: 'VMDLR', rating: 'B', capacityStatus: 'available' },
+  { id: 'F-004', name: 'Phnom Penh Silk Road', code: 'VMHYG', rating: 'B', capacityStatus: 'available' },
+  { id: 'F-005', name: 'Porto Alves Tailoring', code: 'VMPRT', rating: 'A', capacityStatus: 'tight' },
+  { id: 'F-006', name: 'Jakarta Indah Garment', code: 'VMJKT', rating: 'A', capacityStatus: 'available' },
+  { id: 'F-008', name: 'Bandung Cipta Garment', code: 'VMBDG', rating: 'B', capacityStatus: 'available' },
+  { id: 'F-009', name: 'Bucharest European Outerwear', code: 'VMROM', rating: 'B', capacityStatus: 'available' },
+  { id: 'F-011', name: 'Dhaka Bengal Knitworks', code: 'VMDHK', rating: 'B', capacityStatus: 'available' },
+];
 
-  const op = opportunities.find((o) => o.id === opId);
-  const selectedIds = op?.selectedFactoryIds ?? [];
-  if (selectedIds.length === 0) return [];
+const externalPool: { id: string; name: string }[] = [
+  { id: 'X-001', name: 'Dong Nai Sportswear JSC' },
+  { id: 'X-002', name: 'Mumbai Lotus Textiles' },
+  { id: 'X-004', name: 'Bandung Cipta Apparel' },
+  { id: 'X-007', name: 'Siem Reap Textile Works' },
+  { id: 'X-010', name: 'Binh Duong Knit Mfg' },
+  { id: 'X-012', name: 'Semarang Pant Mfg' },
+];
 
-  return selectedIds.map((fid, idx) => {
-    const f = allFactories.find((fac) => fac.id === fid);
-    if (!f) return null;
-    const isExternal = f.supplierType === 'external';
-    const cap = simCap(f);
-    const priority = idx + 1;
+// Generate 3 factory selections: 2 internal + 1 external, with priority 1/2/3
+let _factorySeed = 0;
+export function generateFactorySelections(): FactorySelection[] {
+  const seed = _factorySeed++;
+  const i1 = internalPool[seed % internalPool.length];
+  const i2 = internalPool[(seed + 3) % internalPool.length];
+  const ext = externalPool[seed % externalPool.length];
 
-    let selectionStatus: FactorySelection['selectionStatus'] = 'confirmed';
-    let note: string | undefined;
+  // Simulate capacity changes for the first internal factory sometimes
+  let cap1 = i1.capacityStatus;
+  let status1: FactorySelection['selectionStatus'] = 'confirmed';
+  let note1: string | undefined;
+  if (seed % 3 === 0) { cap1 = 'tight'; status1 = 'capacity_changed'; note1 = `Capacity changed: ${i1.capacityStatus} → Tight`; }
+  else if (seed % 5 === 0) { cap1 = 'full'; status1 = 'capacity_changed'; note1 = `Capacity changed: ${i1.capacityStatus} → Full`; }
 
-    if (isExternal) {
-      selectionStatus = 'newly_available';
-      note = 'External sourcing confirmed — internal code assigned';
-    } else if (cap !== f.capacityStatus) {
-      selectionStatus = 'capacity_changed';
-      note = `Capacity changed: ${f.capacityStatus} → ${cap}`;
-    }
-
-    return {
-      factoryId: f.id,
-      factoryName: f.name,
-      factoryCode: isExternal ? `VM${String.fromCharCode(65 + idx)}XT` : (f.code ?? ''),
-      supplierType: isExternal ? 'external' as const : 'internal' as const,
-      rating: isExternal ? undefined : f.rating,
-      capacityStatus: isExternal ? 'available' as const : cap,
-      selectionStatus,
+  return [
+    {
+      factoryId: i1.id,
+      factoryName: i1.name,
+      factoryCode: i1.code,
+      supplierType: 'internal',
+      rating: i1.rating,
+      capacityStatus: cap1,
+      selectionStatus: status1,
       selected: false,
-      opPriority: priority,
-      note,
-    } satisfies FactorySelection;
-  }).filter(Boolean) as FactorySelection[];
+      opPriority: 1,
+      note: note1,
+    },
+    {
+      factoryId: i2.id,
+      factoryName: i2.name,
+      factoryCode: i2.code,
+      supplierType: 'internal',
+      rating: i2.rating,
+      capacityStatus: i2.capacityStatus,
+      selectionStatus: 'confirmed',
+      selected: false,
+      opPriority: 2,
+    },
+    {
+      factoryId: ext.id,
+      factoryName: ext.name,
+      factoryCode: '',
+      supplierType: 'external',
+      capacityStatus: 'available',
+      selectionStatus: 'newly_available',
+      selected: false,
+      opPriority: 3,
+      note: 'External sourcing confirmed — now available for selection',
+    },
+  ];
 }
 
 // SC templates keyed by OP ID — used when creating new SC from an OP
@@ -298,7 +317,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Atlanta, GA, USA',
     paymentTerm: 'Net 60',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-001'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-002': {
     opId: 'OP-002',
@@ -327,7 +346,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Sydney, NSW, Australia',
     paymentTerm: 'Net 45',
     season: 'SS25',
-    factorySelections: matchToFactorySelections('OP-002'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-003': {
     opId: 'OP-003',
@@ -356,7 +375,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'New York, NY, USA',
     paymentTerm: 'Net 45',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-003'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-004': {
     opId: 'OP-004',
@@ -386,7 +405,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Adelaide, SA, Australia',
     paymentTerm: 'L/C 30 days',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-004'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-005': {
     opId: 'OP-005',
@@ -415,7 +434,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Paris, France',
     paymentTerm: 'Net 60',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-005'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-006': {
     opId: 'OP-006',
@@ -444,7 +463,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'London, UK',
     paymentTerm: 'Net 45',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-006'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-007': {
     opId: 'OP-007',
@@ -482,7 +501,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'London, UK',
     paymentTerm: 'Net 60',
     season: 'SS25',
-    factorySelections: matchToFactorySelections('OP-007'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-008': {
     opId: 'OP-008',
@@ -511,7 +530,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Los Angeles, CA, USA',
     paymentTerm: 'Net 30',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-008'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-009': {
     opId: 'OP-009',
@@ -542,7 +561,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Athens, Greece',
     paymentTerm: 'Net 45',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-009'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-010': {
     opId: 'OP-010',
@@ -571,7 +590,7 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Munich, Germany',
     paymentTerm: 'Net 60',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-010'),
+    factorySelections: generateFactorySelections(),
   },
   'OP-011': {
     opId: 'OP-011',
@@ -601,6 +620,6 @@ export const scTemplates: Record<string, Omit<SalesContract, 'id'>> = {
     dropshipDest: 'Dallas, TX, USA',
     paymentTerm: 'Net 60',
     season: 'FW25',
-    factorySelections: matchToFactorySelections('OP-011'),
+    factorySelections: generateFactorySelections(),
   },
 };

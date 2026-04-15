@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { SalesContract, TradeTerm, ShipMode } from '../../types/salesContract';
-import { scTemplates } from '../../data/salesContracts';
+import { scTemplates, generateFactorySelections } from '../../data/salesContracts';
 import { opportunities } from '../../data/opportunities';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
@@ -44,7 +44,7 @@ export default function ScFormModal({ onClose, onCreateSc, onNavigate }: ScFormM
           dropshipDest: '',
           paymentTerm: 'Net 60',
           season: 'FW25',
-          factorySelections: [],
+          factorySelections: generateFactorySelections(),
         });
       }
     }
