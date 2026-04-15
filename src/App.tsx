@@ -95,8 +95,9 @@ function AppContent() {
   }, []);
 
   // SC handlers
-  const handleCreateSc = useCallback((sc: SalesContract) => {
+  const handleCreateSc = useCallback((sc: SalesContract): string => {
     setScList((prev) => [sc, ...prev]);
+    return sc.id;
   }, []);
 
   const handleUpdateSc = useCallback((scId: string, updates: Partial<SalesContract>) => {

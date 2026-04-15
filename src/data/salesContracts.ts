@@ -1,5 +1,6 @@
 import type { SalesContract, FactorySelection } from '../types/salesContract';
 import { matchResults } from './factories';
+import { opportunities } from './opportunities';
 
 export const salesContracts: SalesContract[] = [
   {
@@ -221,45 +222,51 @@ function simCap(f: { id: string; capacityStatus?: string }): 'available' | 'tigh
   return (f.capacityStatus as 'available' | 'tight' | 'full') ?? 'available';
 }
 
-// Convert OP match results into SC factory selections
+// Convert OP BU-selected factories into SC factory selections (with priority order)
 function matchToFactorySelections(opId: string): FactorySelection[] {
   const result = matchResults[opId];
   if (!result) return [];
-  return [
-    ...result.internalWithCapacity.map((f) => ({
-      factoryId: f.id,
-      factoryName: f.name,
-      factoryCode: f.code ?? '',
-      supplierType: 'internal' as const,
-      rating: f.rating,
-      capacityStatus: simCap(f),
-      selectionStatus: (simCap(f) !== f.capacityStatus ? 'capacity_changed' : 'confirmed') as FactorySelection['selectionStatus'],
-      selected: false,
-      note: simCap(f) !== f.capacityStatus ? `Capacity changed: ${f.capacityStatus} → ${simCap(f)}` : undefined,
-    })),
-    ...result.internalNoCapacity.map((f) => ({
-      factoryId: f.id,
-      factoryName: f.name,
-      factoryCode: f.code ?? '',
-      supplierType: 'internal' as const,
-      rating: f.rating,
-      capacityStatus: simCap(f),
-      selectionStatus: 'capacity_changed' as FactorySelection['selectionStatus'],
-      selected: false,
-      note: `Was full, now ${simCap(f)}`,
-    })),
-    ...result.external.map((f) => ({
-      factoryId: f.id,
-      factoryName: f.name,
-      factoryCode: '',
-      supplierType: 'external' as const,
-      rating: undefined,
-      capacityStatus: 'available' as const,
-      selectionStatus: 'newly_available' as FactorySelection['selectionStatus'],
-      selected: false,
-      note: 'External sourcing confirmed — now available for selection',
-    })),
+  const allFactories = [
+    ...result.internalWithCapacity,
+    ...result.internalNoCapacity,
+    ...result.external,
   ];
+
+  const op = opportunities.find((o) => o.id === opId);
+  const selectedIds = op?.selectedFactoryIds ?? [];
+  if (selectedIds.length === 0) return [];
+
+  return selectedIds.map((fid, idx) => {
+    const f = allFactories.find((fac) => fac.id === fid);
+    if (!f) return null;
+    const isExternal = f.supplierType === 'external';
+    const cap = simCap(f);
+    const priority = idx + 1;
+
+    let selectionStatus: FactorySelection['selectionStatus'] = 'confirmed';
+    let note: string | undefined;
+
+    if (isExternal) {
+      selectionStatus = 'newly_available';
+      note = 'External sourcing confirmed — internal code assigned';
+    } else if (cap !== f.capacityStatus) {
+      selectionStatus = 'capacity_changed';
+      note = `Capacity changed: ${f.capacityStatus} → ${cap}`;
+    }
+
+    return {
+      factoryId: f.id,
+      factoryName: f.name,
+      factoryCode: isExternal ? `VM${String.fromCharCode(65 + idx)}XT` : (f.code ?? ''),
+      supplierType: isExternal ? 'external' as const : 'internal' as const,
+      rating: isExternal ? undefined : f.rating,
+      capacityStatus: isExternal ? 'available' as const : cap,
+      selectionStatus,
+      selected: false,
+      opPriority: priority,
+      note,
+    } satisfies FactorySelection;
+  }).filter(Boolean) as FactorySelection[];
 }
 
 // SC templates keyed by OP ID — used when creating new SC from an OP

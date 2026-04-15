@@ -9,7 +9,7 @@ import ScFormModal from './ScFormModal';
 interface ScListPageProps {
   scList: SalesContract[];
   navigate: (r: Route) => void;
-  onCreateSc: (sc: SalesContract) => void;
+  onCreateSc: (sc: SalesContract) => string;
 }
 
 export default function ScListPage({ scList, navigate, onCreateSc }: ScListPageProps) {
@@ -61,6 +61,7 @@ export default function ScListPage({ scList, navigate, onCreateSc }: ScListPageP
         <ScFormModal
           onClose={() => setShowModal(false)}
           onCreateSc={onCreateSc}
+          onNavigate={(scId) => navigate({ page: 'sc-detail', scId })}
         />
       )}
     </div>

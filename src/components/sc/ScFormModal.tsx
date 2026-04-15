@@ -7,13 +7,14 @@ import { t } from '../../locales';
 
 interface ScFormModalProps {
   onClose: () => void;
-  onCreateSc: (sc: SalesContract) => void;
+  onCreateSc: (sc: SalesContract) => string; // returns new SC ID
+  onNavigate: (scId: string) => void;
 }
 
 const tradeTermOptions: TradeTerm[] = ['FOB', 'DDP', 'CIF'];
 const shipModeOptions: ShipMode[] = ['Sea', 'Air', 'Express'];
 
-export default function ScFormModal({ onClose, onCreateSc }: ScFormModalProps) {
+export default function ScFormModal({ onClose, onCreateSc, onNavigate }: ScFormModalProps) {
   const { lang } = useLang();
   const [selectedOpId, setSelectedOpId] = useState('');
   const [template, setTemplate] = useState<Omit<SalesContract, 'id'> | null>(null);
@@ -55,6 +56,7 @@ export default function ScFormModal({ onClose, onCreateSc }: ScFormModalProps) {
     const newId = `810SC${String(Math.floor(Math.random() * 900000) + 100000)}`;
     onCreateSc({ id: newId, ...template });
     onClose();
+    onNavigate(newId);
   };
 
   return (

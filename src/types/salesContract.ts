@@ -28,6 +28,7 @@ export interface FactorySelection {
   capacityStatus: 'available' | 'tight' | 'full';
   selectionStatus: FactorySelectionStatus;
   selected: boolean;
+  opPriority?: number;               // 1/2/3 priority from OP BU selection
   note?: string;                     // e.g. "Capacity changed from Available to Full"
 }
 

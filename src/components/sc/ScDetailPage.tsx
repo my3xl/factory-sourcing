@@ -1,10 +1,8 @@
 import { useState, useRef } from 'react';
 import type { SalesContract, SCStatus, FactorySelection } from '../../types/salesContract';
-import type { Factory } from '../../types/factory';
 import type { Route } from '../../App';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
-import { matchResults } from '../../data/factories';
 import { FixedTooltip, RatingPopup, CapacityPopup, capacityColor, capacityKey, ratingColor } from '../shared/Tooltip';
 
 function formatAmount(amount: number): string {
@@ -16,13 +14,6 @@ function formatDate(dateStr: string, lang: 'en' | 'zh'): string {
   return lang === 'en'
     ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-}
-
-function simulateCapacityUpdate(f: Factory): 'available' | 'tight' | 'full' {
-  if (!f.capacityStatus) return 'available';
-  if (f.id === 'F-001') return 'full';
-  if (f.id === 'F-005') return 'tight';
-  return f.capacityStatus;
 }
 
 const scStatusLabel: Record<SCStatus, 'scPending' | 'scFactoryConfirmed' | 'scPushed' | 'scInProduction' | 'scShipped'> = {
@@ -87,12 +78,13 @@ function StyleTable({ sc }: { sc: SalesContract }) {
   );
 }
 
-// Factory row with hover tooltips for rating/capacity
-function FactoryRow({ fac, isSelected, onSelect, showRadio }: {
+// Factory row with hover tooltips and OP priority badge
+function FactoryRow({ fac, isSelected, onSelect, isPending, isPushed }: {
   fac: FactorySelection;
   isSelected: boolean;
-  onSelect: () => void;
-  showRadio: boolean;
+  onSelect?: () => void;
+  isPending: boolean;
+  isPushed: boolean;
 }) {
   const { lang } = useLang();
   const ratingRef = useRef<HTMLSpanElement>(null);
@@ -101,19 +93,27 @@ function FactoryRow({ fac, isSelected, onSelect, showRadio }: {
   const [showCapacity, setShowCapacity] = useState(false);
 
   const isExternal = fac.supplierType === 'external';
+  const selectable = isPending && !isPushed;
 
   return (
     <>
       <div
-        onClick={showRadio ? onSelect : undefined}
+        onClick={selectable ? onSelect : undefined}
         className={`border rounded-lg p-3 text-xs transition-colors ${
-          showRadio ? 'cursor-pointer' : ''
+          selectable ? 'cursor-pointer' : ''
         } ${
           isSelected ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white hover:border-gray-300'
         }`}
       >
         <div className="flex items-center gap-2">
-          {showRadio && (
+          {/* OP Priority badge */}
+          {fac.opPriority && (
+            <span className="w-5 h-5 rounded-full bg-brand-brown text-white text-[10px] font-bold flex items-center justify-center shrink-0 leading-none">
+              {fac.opPriority}
+            </span>
+          )}
+          {/* Radio button (only for pending, not yet pushed) */}
+          {selectable && (
             <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
               isSelected ? 'border-brand-brown' : 'border-gray-300'
             }`}>
@@ -158,7 +158,7 @@ function FactoryRow({ fac, isSelected, onSelect, showRadio }: {
             )}
           </div>
         </div>
-        {fac.note && <div className="ml-5.5 mt-1 text-[10px] text-blue-600 italic">{fac.note}</div>}
+        {fac.note && <div className="ml-7 mt-1 text-[10px] text-blue-600 italic">{fac.note}</div>}
       </div>
 
       {showRating && ratingRef.current && (
@@ -189,11 +189,12 @@ interface ScDetailPageProps {
 export default function ScDetailPage({ scId, scList, onUpdateSc, navigate }: ScDetailPageProps) {
   const { lang } = useLang();
   const sc = scList.find((s) => s.id === scId);
+  const isPending = sc?.status === 'pending';
+  const isPushed = sc?.status === 'pushed';
+
   const [selectedFactoryId, setSelectedFactoryId] = useState<string | null>(
     sc?.factorySelections.find((f) => f.selected)?.factoryId ?? null
   );
-  const [refreshing, setRefreshing] = useState(false);
-  const [allFactories, setAllFactories] = useState<FactorySelection[] | null>(null);
   const [showPushSuccess, setShowPushSuccess] = useState(false);
 
   if (!sc) {
@@ -204,77 +205,29 @@ export default function ScDetailPage({ scId, scList, onUpdateSc, navigate }: ScD
     );
   }
 
-  const opSelectedIds = new Set(sc.factorySelections.filter((f) => f.selected).map((f) => f.factoryId));
-  const displayFactories = allFactories ?? sc.factorySelections;
-  const opSelected = displayFactories.filter((f) => opSelectedIds.has(f.factoryId));
-  const selectable = displayFactories.filter((f) => !opSelectedIds.has(f.factoryId));
-  const selectedFactory = displayFactories.find((f) => f.factoryId === selectedFactoryId);
+  // For non-pending SCs, only show the selected/pushed factory
+  const displayFactories = isPending
+    ? sc.factorySelections
+    : sc.factorySelections.filter((f) => f.selected);
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      const opMatch = matchResults[sc.opId];
-      if (!opMatch) {
-        setAllFactories([]);
-        setRefreshing(false);
-        return;
-      }
-      const allFromMatch = [
-        ...opMatch.internalWithCapacity.map((f) => {
-          const cap = simulateCapacityUpdate(f);
-          return {
-            factoryId: f.id,
-            factoryName: f.name,
-            factoryCode: f.code ?? '',
-            supplierType: f.supplierType as 'internal' | 'external',
-            rating: f.rating,
-            capacityStatus: cap,
-            selectionStatus: opSelectedIds.has(f.id)
-              ? (cap !== f.capacityStatus ? 'capacity_changed' : 'confirmed')
-              : 'confirmed',
-            selected: false,
-            note: cap !== f.capacityStatus ? `Capacity changed: ${f.capacityStatus} → ${cap}` : undefined,
-          } satisfies FactorySelection;
-        }),
-        ...opMatch.internalNoCapacity.map((f) => {
-          const cap = simulateCapacityUpdate(f);
-          return {
-            factoryId: f.id,
-            factoryName: f.name,
-            factoryCode: f.code ?? '',
-            supplierType: f.supplierType as 'internal',
-            rating: f.rating,
-            capacityStatus: cap,
-            selectionStatus: opSelectedIds.has(f.id) ? 'capacity_changed' : 'confirmed',
-            selected: false,
-            note: `Was full, now ${cap}`,
-          } satisfies FactorySelection;
-        }),
-        ...opMatch.external.map((f) => ({
-          factoryId: f.id,
-          factoryName: f.name,
-          factoryCode: '',
-          supplierType: 'external' as const,
-          rating: undefined,
-          capacityStatus: 'available' as const,
-          selectionStatus: 'newly_available' as const,
-          selected: false,
-          note: 'External sourcing confirmed — now available',
-        })),
-      ];
-      setAllFactories(allFromMatch);
-      setRefreshing(false);
-    }, 1500);
-  };
+  const selectedFactory = displayFactories.find((f) => f.factoryId === selectedFactoryId);
+  const pushDisabled = !selectedFactoryId || !selectedFactory || selectedFactory.capacityStatus === 'full';
 
   const handlePush = () => {
     if (!selectedFactory || selectedFactory.capacityStatus === 'full') return;
-    onUpdateSc(scId, { status: 'pushed' });
+    onUpdateSc(scId, {
+      status: 'pushed',
+      factorySelections: sc.factorySelections.map((f) => ({
+        ...f,
+        selected: f.factoryId === selectedFactoryId,
+      })),
+    });
     setShowPushSuccess(true);
-    setTimeout(() => setShowPushSuccess(false), 5000);
+    setTimeout(() => {
+      setShowPushSuccess(false);
+      navigate({ page: 'sc' });
+    }, 2000);
   };
-
-  const pushDisabled = sc.status !== 'pending' || !selectedFactoryId || !selectedFactory || selectedFactory.capacityStatus === 'full';
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
@@ -374,65 +327,29 @@ export default function ScDetailPage({ scId, scList, onUpdateSc, navigate }: ScD
 
       {/* Factory Selection */}
       <div className="bg-white rounded-xl border border-brand-border shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-brand-dark">
-            {t(lang, 'scFactorySelection')}
-          </h3>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-xs px-2.5 py-1 rounded bg-brand-brown text-white hover:bg-brand-brown/90 disabled:opacity-50 transition-colors flex items-center gap-1"
-          >
-            {refreshing ? (
-              <>
-                <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                {t(lang, 'refreshing')}
-              </>
-            ) : (
-              <>
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                {t(lang, 'scUpdateFactory')}
-              </>
-            )}
-          </button>
-        </div>
+        <h3 className="text-base font-semibold text-brand-dark mb-4">
+          {t(lang, 'scFactorySelection')}
+        </h3>
 
-        {/* OP-selected factories (reference only) */}
-        {opSelected.length > 0 && (
-          <div className="mb-4">
-            <div className="text-[10px] text-brand-gray uppercase tracking-wider mb-1.5">
-              {t(lang, 'scOpSelected')}
-            </div>
-            <div className="space-y-1.5">
-              {opSelected.map((fac) => (
-                <div key={fac.factoryId} className="border border-brand-brown/30 rounded-lg p-2.5 bg-brand-brown/5">
-                  <FactoryRow fac={fac} isSelected={false} onSelect={() => {}} showRadio={false} />
-                </div>
-              ))}
-            </div>
+        {displayFactories.length === 0 ? (
+          <p className="text-sm text-brand-gray italic">{t(lang, 'scNoFactory')}</p>
+        ) : (
+          <div className="space-y-1.5">
+            {displayFactories.map((fac) => (
+              <FactoryRow
+                key={fac.factoryId}
+                fac={fac}
+                isSelected={fac.factoryId === selectedFactoryId || fac.selected}
+                onSelect={() => setSelectedFactoryId(fac.factoryId === selectedFactoryId ? null : fac.factoryId)}
+                isPending={isPending}
+                isPushed={isPushed}
+              />
+            ))}
           </div>
         )}
 
-        {/* Selectable factories */}
-        <div className="space-y-1.5">
-          {selectable.map((fac) => (
-            <FactoryRow
-              key={fac.factoryId}
-              fac={fac}
-              isSelected={fac.factoryId === selectedFactoryId}
-              onSelect={() => setSelectedFactoryId(fac.factoryId === selectedFactoryId ? null : fac.factoryId)}
-              showRadio
-            />
-          ))}
-        </div>
-
-        {/* Push to Factory button */}
-        {sc.status === 'pending' && (
+        {/* Push to Factory button — only for pending */}
+        {isPending && !isPushed && (
           <div className="mt-6 pt-4 border-t border-gray-100">
             {pushDisabled && selectedFactory?.capacityStatus === 'full' && (
               <p className="text-xs text-yellow-700 mb-2">{t(lang, 'scDetailPushDisabled')}</p>
