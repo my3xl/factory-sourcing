@@ -8,9 +8,10 @@ interface MatchResultsProps {
   result: OpMatchResult;
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
+  selectable?: boolean;
 }
 
-export default function MatchResults({ result, selectedIds, onToggleSelect }: MatchResultsProps) {
+export default function MatchResults({ result, selectedIds, onToggleSelect, selectable = true }: MatchResultsProps) {
   const { lang } = useLang();
   const [noCapacityOpen, setNoCapacityOpen] = useState(false);
 
@@ -35,6 +36,7 @@ export default function MatchResults({ result, selectedIds, onToggleSelect }: Ma
               factory={f}
               selected={selectedIds.has(f.id)}
               onToggleSelect={() => onToggleSelect(f.id)}
+              showCheckbox={selectable}
             />
           ))}
         </div>
@@ -69,6 +71,7 @@ export default function MatchResults({ result, selectedIds, onToggleSelect }: Ma
                   factory={f}
                   selected={selectedIds.has(f.id)}
                   onToggleSelect={() => onToggleSelect(f.id)}
+                  showCheckbox={selectable}
                 />
               ))}
             </div>
@@ -94,6 +97,7 @@ export default function MatchResults({ result, selectedIds, onToggleSelect }: Ma
                 factory={f}
                 selected={selectedIds.has(f.id)}
                 onToggleSelect={() => onToggleSelect(f.id)}
+                showCheckbox={selectable}
               />
             ))}
           </div>

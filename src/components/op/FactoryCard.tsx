@@ -103,9 +103,10 @@ interface FactoryCardProps {
   factory: Factory;
   selected: boolean;
   onToggleSelect: () => void;
+  showCheckbox?: boolean;
 }
 
-export default function FactoryCard({ factory, selected, onToggleSelect }: FactoryCardProps) {
+export default function FactoryCard({ factory, selected, onToggleSelect, showCheckbox = true }: FactoryCardProps) {
   const { lang } = useLang();
   const isExternal = factory.supplierType === 'external';
 
@@ -121,12 +122,14 @@ export default function FactoryCard({ factory, selected, onToggleSelect }: Facto
       }`}>
         {/* Row 1: Name + Score + Badges */}
         <div className="flex items-center gap-2 mb-2">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelect}
-            className="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown cursor-pointer"
-          />
+          {showCheckbox && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggleSelect}
+              className="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown cursor-pointer"
+            />
+          )}
           <span className="font-medium text-brand-dark">{factory.name}</span>
           {factory.code && (
             <span className="text-xs text-brand-gray font-mono">{factory.code}</span>

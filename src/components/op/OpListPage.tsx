@@ -1,89 +1,25 @@
-import { useState, useCallback, useRef } from 'react';
-import { opportunities as initialOpportunities } from '../../data/opportunities';
-import { matchResults as staticMatchResults } from '../../data/factories';
-import type { Opportunity, MatchStatus } from '../../types/opportunity';
+import type { Opportunity } from '../../types/opportunity';
 import type { OpMatchResult } from '../../types/factory';
+import type { Route } from '../../App';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 import OpRow from './OpRow';
 
-const sampleOpIds = Object.keys(staticMatchResults);
+interface OpListPageProps {
+  opList: Opportunity[];
+  dynamicMatches: Record<string, OpMatchResult>;
+  navigate: (r: Route) => void;
+}
 
-export default function OpListPage() {
+export default function OpListPage({ opList, dynamicMatches, navigate }: OpListPageProps) {
   const { lang } = useLang();
-  const [opList, setOpList] = useState<Opportunity[]>(initialOpportunities);
-  const [matchingIds, setMatchingIds] = useState<Set<string>>(new Set());
-  const [dynamicMatches, setDynamicMatches] = useState<Record<string, OpMatchResult>>({});
-  const [sampleIdx, setSampleIdx] = useState(0);
-
-  // Track which sample each new OP was derived from
-  const sourceMap = useRef<Record<string, string>>({});
-
-  const handleNewOp = () => {
-    const sourceOpId = sampleOpIds[sampleIdx % sampleOpIds.length];
-    const sourceOp = initialOpportunities.find((o) => o.id === sourceOpId) ?? initialOpportunities[0];
-    setSampleIdx((i) => i + 1);
-
-    const newId = `OP-${Date.now().toString().slice(-5)}`;
-    const opNum = `OP-${String(Date.now()).slice(-3)}`;
-    sourceMap.current[newId] = sourceOpId;
-
-    const newOp: Opportunity = {
-      ...sourceOp,
-      id: newId,
-      opNumber: opNum,
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      matchStatus: 'sourcing_needed' as MatchStatus,
-      matchedAt: '',
-      matchedCount: 0,
-    };
-
-    setOpList((prev) => [newOp, ...prev]);
-    setMatchingIds((prev) => new Set(prev).add(newId));
-  };
-
-  const handleMatchDone = useCallback((opId: string) => {
-    setMatchingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(opId);
-      return next;
-    });
-
-    const sourceSampleId = sourceMap.current[opId] ?? sampleOpIds[0];
-    const matchResult = staticMatchResults[sourceSampleId];
-
-    setDynamicMatches((prev) => ({
-      ...prev,
-      [opId]: matchResult
-        ? { ...matchResult, opId }
-        : { opId, internalWithCapacity: [], internalNoCapacity: [], external: [] },
-    }));
-
-    const count = matchResult
-      ? matchResult.internalWithCapacity.length + matchResult.internalNoCapacity.length + matchResult.external.length
-      : 0;
-
-    setOpList((prev) =>
-      prev.map((op) =>
-        op.id === opId
-          ? {
-              ...op,
-              matchStatus: (count > 0 ? 'matched' : 'sourcing_needed') as MatchStatus,
-              matchedAt: new Date().toISOString(),
-              matchedCount: count,
-            }
-          : op
-      )
-    );
-  }, []);
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-brand-dark">{t(lang, 'pageTitle')}</h2>
         <button
-          onClick={handleNewOp}
+          onClick={() => navigate({ page: 'op-form' })}
           className="text-sm px-4 py-2 rounded-lg bg-brand-brown text-white hover:bg-brand-brown/90 transition-colors flex items-center gap-1.5"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -114,9 +50,8 @@ export default function OpListPage() {
             <OpRow
               key={op.id}
               op={op}
-              isMatching={matchingIds.has(op.id)}
-              onMatchDone={() => handleMatchDone(op.id)}
               dynamicMatchResult={dynamicMatches[op.id]}
+              onClick={() => navigate({ page: 'op-detail', opId: op.id })}
             />
           ))}
         </div>

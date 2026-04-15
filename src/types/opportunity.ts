@@ -17,4 +17,5 @@ export interface Opportunity {
   matchStatus: MatchStatus;
   matchedAt: string;
   matchedCount: number;
+  selectedFactoryIds?: string[];
 }
