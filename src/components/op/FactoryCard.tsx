@@ -28,7 +28,9 @@ function RatingTooltip({ detail }: { detail: { quality: number; delivery: number
     { label: 'Cooperation', value: detail.cooperation },
   ];
   return (
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-lg z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+      style={{ zIndex: 9999 }}
+    >
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-2 h-2 bg-brand-dark rotate-45" />
       <div className="space-y-1.5">
         {items.map((item) => (
@@ -52,7 +54,9 @@ function RatingTooltip({ detail }: { detail: { quality: number; delivery: number
 
 function CapacityTooltip({ detail }: { detail: { window: string; availableLines: number; totalLines: number } }) {
   return (
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-lg z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+      style={{ zIndex: 9999 }}
+    >
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-2 h-2 bg-brand-dark rotate-45" />
       <div className="space-y-1.5">
         <div className="flex justify-between">
@@ -79,7 +83,7 @@ export default function FactoryCard({ factory, selected, onToggleSelect }: Facto
   const isExternal = factory.supplierType === 'external';
 
   return (
-    <div className={`border rounded-lg p-3 text-sm transition-colors ${
+    <div className={`border rounded-lg p-3 text-sm transition-colors overflow-visible ${
       selected ? 'border-brand-brown bg-brand-brown/5' : 'border-gray-200 bg-white'
     }`}>
       {/* Row 1: Name + Score + Badges */}

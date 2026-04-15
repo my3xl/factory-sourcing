@@ -1,30 +1,35 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { opportunities as initialOpportunities } from '../../data/opportunities';
+import { matchResults as staticMatchResults } from '../../data/factories';
 import type { Opportunity, MatchStatus } from '../../types/opportunity';
+import type { OpMatchResult } from '../../types/factory';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 import OpRow from './OpRow';
 
-const newOpTemplates = [
-  { brand: 'SPANX', brandCode: 'SPX', productCategory: 'Yoga Legging', coo: ['Vietnam', 'Cambodia'], unitPrice: 12.0, qty: 20000, exFactoryDate: '2025-11-15', accountManager: 'Vince' },
-  { brand: 'ALLSAINTS', brandCode: 'ALS', productCategory: 'Knit Sweater', coo: ['Portugal', 'Turkey'], unitPrice: 22.0, qty: 6000, exFactoryDate: '2025-12-01', accountManager: 'David' },
-  { brand: 'BONOBOS', brandCode: 'BON', productCategory: 'Wool Overcoat', coo: ['Romania', 'Italy'], unitPrice: 48.0, qty: 3000, exFactoryDate: '2025-11-20', accountManager: 'Michael' },
-];
+const sampleOpIds = Object.keys(staticMatchResults);
 
 export default function OpListPage() {
   const { lang } = useLang();
   const [opList, setOpList] = useState<Opportunity[]>(initialOpportunities);
   const [matchingIds, setMatchingIds] = useState<Set<string>>(new Set());
-  const [templateIdx, setTemplateIdx] = useState(0);
+  const [dynamicMatches, setDynamicMatches] = useState<Record<string, OpMatchResult>>({});
+  const [sampleIdx, setSampleIdx] = useState(0);
+
+  // Track which sample each new OP was derived from
+  const sourceMap = useRef<Record<string, string>>({});
 
   const handleNewOp = () => {
-    const tpl = newOpTemplates[templateIdx % newOpTemplates.length];
-    setTemplateIdx((i) => i + 1);
+    const sourceOpId = sampleOpIds[sampleIdx % sampleOpIds.length];
+    const sourceOp = initialOpportunities.find((o) => o.id === sourceOpId) ?? initialOpportunities[0];
+    setSampleIdx((i) => i + 1);
 
     const newId = `OP-${Date.now().toString().slice(-5)}`;
+    sourceMap.current[newId] = sourceOpId;
+
     const newOp: Opportunity = {
+      ...sourceOp,
       id: newId,
-      ...tpl,
       status: 'open',
       createdAt: new Date().toISOString(),
       matchStatus: 'sourcing_needed' as MatchStatus,
@@ -42,10 +47,30 @@ export default function OpListPage() {
       next.delete(opId);
       return next;
     });
+
+    const sourceSampleId = sourceMap.current[opId] ?? sampleOpIds[0];
+    const matchResult = staticMatchResults[sourceSampleId];
+
+    setDynamicMatches((prev) => ({
+      ...prev,
+      [opId]: matchResult
+        ? { ...matchResult, opId }
+        : { opId, internalWithCapacity: [], internalNoCapacity: [], external: [] },
+    }));
+
+    const count = matchResult
+      ? matchResult.internalWithCapacity.length + matchResult.internalNoCapacity.length + matchResult.external.length
+      : 0;
+
     setOpList((prev) =>
       prev.map((op) =>
         op.id === opId
-          ? { ...op, matchStatus: 'matched' as MatchStatus, matchedAt: new Date().toISOString(), matchedCount: 3 }
+          ? {
+              ...op,
+              matchStatus: (count > 0 ? 'matched' : 'sourcing_needed') as MatchStatus,
+              matchedAt: new Date().toISOString(),
+              matchedCount: count,
+            }
           : op
       )
     );
@@ -88,6 +113,7 @@ export default function OpListPage() {
               op={op}
               isMatching={matchingIds.has(op.id)}
               onMatchDone={() => handleMatchDone(op.id)}
+              dynamicMatchResult={dynamicMatches[op.id]}
             />
           ))}
         </div>

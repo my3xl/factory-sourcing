@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import type { Opportunity, OpStatus, MatchStatus } from '../../types/opportunity';
+import type { OpMatchResult } from '../../types/factory';
 import { useLang } from '../../context/LanguageContext';
 import { t } from '../../locales';
 import { matchResults } from '../../data/factories';
 import MatchResults from './MatchResults';
 
 function formatRelativeTime(dateStr: string, lang: 'en' | 'zh'): string {
+  if (!dateStr) return '';
   const now = new Date();
   const date = new Date(dateStr);
   const diffMs = now.getTime() - date.getTime();
@@ -62,19 +64,19 @@ const matchStatusColor: Record<MatchStatus, string> = {
   no_match: 'bg-red-100 text-red-600',
 };
 
-function getTotalMatchCount(opId: string): number {
-  const r = matchResults[opId];
-  if (!r) return 0;
-  return r.internalWithCapacity.length + r.internalNoCapacity.length + r.external.length;
+function getMatchCount(result: OpMatchResult | undefined): number {
+  if (!result) return 0;
+  return result.internalWithCapacity.length + result.internalNoCapacity.length + result.external.length;
 }
 
 interface OpRowProps {
   op: Opportunity;
   isMatching?: boolean;
   onMatchDone?: () => void;
+  dynamicMatchResult?: OpMatchResult;
 }
 
-export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
+export default function OpRow({ op, isMatching, onMatchDone, dynamicMatchResult }: OpRowProps) {
   const { lang } = useLang();
   const [expanded, setExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,8 +93,8 @@ export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
     }
   }, [isMatching, onMatchDone]);
 
-  const result = matchResults[op.id];
-  const totalMatched = getTotalMatchCount(op.id);
+  const result = dynamicMatchResult ?? matchResults[op.id];
+  const totalMatched = getMatchCount(result);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -131,12 +133,12 @@ export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
         <span>{formatQty(op.qty, lang)}</span>
         <span>{formatDate(op.exFactoryDate, lang)}</span>
         <span>{op.accountManager}</span>
-        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center ${opStatusColor[op.status]}`}>
+        <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-medium text-center min-w-[80px] ${opStatusColor[op.status]}`}>
           {t(lang, opStatusLabel[op.status])}
         </span>
         <div className="flex items-center gap-2">
           {(refreshing || isMatching) ? (
-            <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium text-center bg-yellow-100 text-yellow-700 min-w-[90px]">
+            <span className="inline-flex items-center justify-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700 min-w-[120px]">
               <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -144,7 +146,7 @@ export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
               {t(lang, 'matchMatching')}
             </span>
           ) : (
-            <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-medium text-center min-w-[90px] ${matchStatusColor[op.matchStatus]}`}>
+            <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-medium text-center min-w-[120px] ${matchStatusColor[op.matchStatus]}`}>
               {t(lang, matchStatusLabel[op.matchStatus])}
               {op.matchStatus === 'matched' && totalMatched > 0 && ` (${totalMatched})`}
             </span>
@@ -160,8 +162,8 @@ export default function OpRow({ op, isMatching, onMatchDone }: OpRowProps) {
 
       {/* Expanded match results */}
       <div
-        className={`overflow-hidden transition-all duration-300 ${
-          expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+        className={`overflow-visible transition-all duration-300 ${
+          expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
         }`}
       >
         <div className="px-5 pb-4 pt-1 bg-brand-cream/50 border-t border-brand-border">
