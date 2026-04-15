@@ -77,7 +77,7 @@ export const opportunities: Opportunity[] = [
     accountManager: 'Vince',
     status: 'open',
     createdAt: '2025-07-25T08:30:00Z',
-    matchStatus: 'matching',
+    matchStatus: 'matched',
     matchedAt: '2025-07-25T08:30:00Z',
     matchedCount: 0,
   },

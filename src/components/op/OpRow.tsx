@@ -50,16 +50,14 @@ const opStatusColor: Record<OpStatus, string> = {
   lost: 'bg-red-100 text-red-600',
 };
 
-const matchStatusLabel: Record<MatchStatus, 'matchMatched' | 'matchMatching' | 'matchSourcingNeeded' | 'matchNoMatch'> = {
+const matchStatusLabel: Record<MatchStatus, 'matchMatched' | 'matchSourcingNeeded' | 'matchNoMatch'> = {
   matched: 'matchMatched',
-  matching: 'matchMatching',
   sourcing_needed: 'matchSourcingNeeded',
   no_match: 'matchNoMatch',
 };
 
 const matchStatusColor: Record<MatchStatus, string> = {
   matched: 'bg-green-100 text-green-700',
-  matching: 'bg-yellow-100 text-yellow-700',
   sourcing_needed: 'bg-orange-100 text-orange-700',
   no_match: 'bg-red-100 text-red-600',
 };
@@ -125,9 +123,15 @@ export default function OpRow({ op }: OpRowProps) {
           {t(lang, opStatusLabel[op.status])}
         </span>
         <div className="flex items-center justify-end gap-2">
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${matchStatusColor[op.matchStatus]}`}>
-            {t(lang, matchStatusLabel[op.matchStatus])}
-          </span>
+          {refreshing ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-yellow-100 text-yellow-700">
+              {t(lang, 'matchMatching')}
+            </span>
+          ) : (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${matchStatusColor[op.matchStatus]}`}>
+              {t(lang, matchStatusLabel[op.matchStatus])}
+            </span>
+          )}
           {op.matchStatus === 'matched' && totalMatched > 0 && (
             <span className="text-[10px] text-brand-gray">
               {totalMatched}

@@ -1,5 +1,5 @@
 export type OpStatus = 'open' | 'in_progress' | 'won' | 'lost';
-export type MatchStatus = 'matched' | 'matching' | 'sourcing_needed' | 'no_match';
+export type MatchStatus = 'matched' | 'sourcing_needed' | 'no_match';
 
 export interface Opportunity {
   id: string;

@@ -20,6 +20,54 @@ const ratingColor: Record<string, string> = {
   C: 'bg-gray-400 text-white',
 };
 
+function RatingTooltip({ detail }: { detail: { quality: number; delivery: number; price: number; cooperation: number } }) {
+  const items = [
+    { label: 'Quality', value: detail.quality },
+    { label: 'Delivery', value: detail.delivery },
+    { label: 'Price', value: detail.price },
+    { label: 'Cooperation', value: detail.cooperation },
+  ];
+  return (
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-lg z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-2 h-2 bg-brand-dark rotate-45" />
+      <div className="space-y-1.5">
+        {items.map((item) => (
+          <div key={item.label} className="flex items-center justify-between gap-2">
+            <span className="text-white/70">{item.label}</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${item.value >= 80 ? 'bg-green-400' : item.value >= 60 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                  style={{ width: `${item.value}%` }}
+                />
+              </div>
+              <span className="w-7 text-right font-medium">{item.value}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CapacityTooltip({ detail }: { detail: { window: string; availableLines: number; totalLines: number } }) {
+  return (
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-brand-dark text-white rounded-lg p-3 text-xs shadow-lg z-50 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-2 h-2 bg-brand-dark rotate-45" />
+      <div className="space-y-1.5">
+        <div className="flex justify-between">
+          <span className="text-white/70">Window</span>
+          <span className="font-medium">{detail.window}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-white/70">Lines</span>
+          <span className="font-medium">{detail.availableLines} / {detail.totalLines} available</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface FactoryCardProps {
   factory: Factory;
   selected: boolean;
@@ -43,7 +91,9 @@ export default function FactoryCard({ factory, selected, onToggleSelect }: Facto
           className="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown cursor-pointer"
         />
         <span className="font-medium text-brand-dark">{factory.name}</span>
-        <span className="text-xs text-brand-gray">({factory.code})</span>
+        {factory.code && (
+          <span className="text-xs text-brand-gray font-mono">{factory.code}</span>
+        )}
 
         {/* Match score */}
         <div className="ml-auto flex items-center gap-2">
@@ -57,21 +107,36 @@ export default function FactoryCard({ factory, selected, onToggleSelect }: Facto
           <span className="text-xs font-medium">{factory.matchScore}%</span>
         </div>
 
-        {/* Badges */}
-        {isExternal && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-            {t(lang, 'externalBadge')}
-          </span>
-        )}
+        {/* Rating badge with tooltip — internal only */}
         {factory.rating && !isExternal && (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${ratingColor[factory.rating]}`}>
-            {factory.rating}
-          </span>
+          <div className="relative group">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium cursor-default ${ratingColor[factory.rating]}`}>
+              {factory.rating}
+            </span>
+            {factory.ratingDetail && <RatingTooltip detail={factory.ratingDetail} />}
+          </div>
         )}
+
+        {/* Capacity badge with tooltip — internal only */}
         {factory.capacityStatus && !isExternal && (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${capacityColor[factory.capacityStatus]}`}>
-            {t(lang, capacityKey[factory.capacityStatus])}
-          </span>
+          <div className="relative group">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium cursor-default ${capacityColor[factory.capacityStatus]}`}>
+              {t(lang, capacityKey[factory.capacityStatus])}
+            </span>
+            {factory.capacityDetail && <CapacityTooltip detail={factory.capacityDetail} />}
+          </div>
+        )}
+
+        {/* External: gray "No Rating" + "Capacity Unknown" */}
+        {isExternal && (
+          <>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 font-medium">
+              {t(lang, 'noRating')}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 font-medium">
+              {t(lang, 'capacityUnknown')}
+            </span>
+          </>
         )}
       </div>
 
@@ -101,7 +166,7 @@ export default function FactoryCard({ factory, selected, onToggleSelect }: Facto
 
       {/* External pending note */}
       {isExternal && (
-        <div className="ml-6 mt-1.5 text-[10px] text-blue-600 italic">
+        <div className="ml-6 mt-1.5 text-[10px] text-gray-400 italic">
           {t(lang, 'externalPendingNote')}
         </div>
       )}
